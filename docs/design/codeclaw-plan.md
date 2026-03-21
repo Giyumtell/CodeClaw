@@ -236,6 +236,7 @@ That is enough to prove the core edge.
 4. Implement a first context-selection helper for task prompts.
 5. Wire that helper into one agent spawn path.
 6. Add tests around repo assignment and artifact discovery.
+7. Introduce a reusable CodeClaw task packet format so repo/task metadata can be handed to coding agents cleanly.
 
 ---
 
