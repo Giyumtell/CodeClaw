@@ -229,6 +229,19 @@ const coreEntries: CoreCliEntry[] = [
       mod.registerBrowserCli(program);
     },
   },
+  {
+    commands: [
+      {
+        name: "codeclaw",
+        description: "Manage CodeClaw build projects and tasks",
+        hasSubcommands: true,
+      },
+    ],
+    register: async ({ program }) => {
+      const mod = await import("./register.codeclaw.js");
+      mod.registerCodeClawCommands(program);
+    },
+  },
 ];
 
 export function getCoreCliCommandNames(): string[] {

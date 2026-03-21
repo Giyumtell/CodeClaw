@@ -1,0 +1,79 @@
+import type { Command } from "commander";
+import { codeClawAssignCommand, codeClawStatusCommand } from "../../commands/codeclaw.js";
+import { defaultRuntime } from "../../runtime.js";
+import { formatDocsLink } from "../../terminal/links.js";
+import { theme } from "../../terminal/theme.js";
+import { runCommandWithRuntime } from "../cli-utils.js";
+import { formatHelpExamples } from "../help-format.js";
+import { collectOption } from "./helpers.js";
+
+export function registerCodeClawCommands(program: Command) {
+  const codeclaw = program
+    .command("codeclaw")
+    .description("Manage CodeClaw build projects and tasks")
+    .addHelpText(
+      "after",
+      () =>
+        `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/codeclaw", "docs.openclaw.ai/cli/codeclaw")}\n`,
+    );
+
+  codeclaw
+    .command("assign")
+    .description("Assign a new task to a repo-backed CodeClaw project")
+    .requiredOption("--repo-root <dir>", "Repository root")
+    .requiredOption("--objective <text>", "Task objective")
+    .option("--title <text>", "Optional task title")
+    .option("--workspace-name <name>", "Optional workspace label")
+    .option("--acceptance <text>", "Acceptance criterion (repeatable)", collectOption, [])
+    .option("--constraint <text>", "Constraint (repeatable)", collectOption, [])
+    .option("--json", "Output JSON instead of text", false)
+    .addHelpText(
+      "after",
+      () =>
+        `\n${theme.heading("Examples:")}\n${formatHelpExamples([
+          [
+            'openclaw codeclaw assign --repo-root ~/src/app --objective "add status command"',
+            "Create the first tracked task.",
+          ],
+          [
+            'openclaw codeclaw assign --repo-root ~/src/app --objective "wire task packets" --acceptance "spawn path uses packet"',
+            "Store acceptance criteria with the task.",
+          ],
+        ])}`,
+    )
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawAssignCommand(
+          {
+            repoRoot: opts.repoRoot as string,
+            objective: opts.objective as string,
+            title: opts.title as string | undefined,
+            workspaceName: opts.workspaceName as string | undefined,
+            acceptanceCriteria: Array.isArray(opts.acceptance)
+              ? (opts.acceptance as string[])
+              : undefined,
+            constraints: Array.isArray(opts.constraint) ? (opts.constraint as string[]) : undefined,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  codeclaw
+    .command("status")
+    .description("Show tracked CodeClaw project/task state")
+    .option("--repo-root <dir>", "Filter to one repository root")
+    .option("--json", "Output JSON instead of text", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawStatusCommand(
+          {
+            repoRoot: opts.repoRoot as string | undefined,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+}
