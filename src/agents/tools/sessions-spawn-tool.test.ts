@@ -98,6 +98,35 @@ describe("sessions_spawn tool", () => {
     );
   });
 
+  it("prepends a formatted CodeClaw task packet for subagent spawns", async () => {
+    const tool = createSessionsSpawnTool({
+      agentSessionKey: "agent:main:main",
+    });
+
+    await tool.execute("call-codeclaw-subagent", {
+      task: "implement the task packet consumer",
+      codeclawTask: {
+        title: "Task packet consumer",
+        repoRoot: "/home/god/clawd/projects/CodeClaw",
+        acceptanceCriteria: ["spawn path uses the packet"],
+        constraints: ["keep it focused"],
+      },
+    });
+
+    expect(hoisted.spawnSubagentDirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.stringContaining("# CodeClaw Task Packet"),
+      }),
+      expect.any(Object),
+    );
+    expect(hoisted.spawnSubagentDirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.stringContaining("## Requested Work\nimplement the task packet consumer"),
+      }),
+      expect.any(Object),
+    );
+  });
+
   it("routes to ACP runtime when runtime=acp", async () => {
     const tool = createSessionsSpawnTool({
       agentSessionKey: "agent:main:main",
@@ -185,6 +214,36 @@ describe("sessions_spawn tool", () => {
     );
   });
 
+  it("prepends a formatted CodeClaw task packet for ACP spawns", async () => {
+    const tool = createSessionsSpawnTool({
+      agentSessionKey: "agent:main:main",
+    });
+
+    await tool.execute("call-codeclaw-acp", {
+      runtime: "acp",
+      task: "review the builder flow",
+      agentId: "codex",
+      codeclawTask: {
+        title: "Builder flow review",
+        repoRoot: "/home/god/clawd/projects/CodeClaw",
+        acceptanceCriteria: ["identify the next missing piece"],
+      },
+    });
+
+    expect(hoisted.spawnAcpDirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.stringContaining("# CodeClaw Task Packet"),
+      }),
+      expect.any(Object),
+    );
+    expect(hoisted.spawnAcpDirectMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: expect.stringContaining("## Requested Work\nreview the builder flow"),
+      }),
+      expect.any(Object),
+    );
+  });
+
   it("rejects resumeSessionId without runtime=acp", async () => {
     const tool = createSessionsSpawnTool({
       agentSessionKey: "agent:main:main",
@@ -258,11 +317,19 @@ describe("sessions_spawn tool", () => {
             };
           };
         };
+        codeclawTask?: {
+          properties?: {
+            repoRoot?: {
+              type?: string;
+            };
+          };
+        };
       };
     };
 
     const contentSchema = schema.properties?.attachments?.items?.properties?.content;
     expect(contentSchema?.type).toBe("string");
     expect(contentSchema?.maxLength).toBeUndefined();
+    expect(schema.properties?.codeclawTask?.properties?.repoRoot?.type).toBe("string");
   });
 });

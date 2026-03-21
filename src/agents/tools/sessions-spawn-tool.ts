@@ -1,11 +1,12 @@
 import { Type } from "@sinclair/typebox";
 import type { GatewayMessageChannel } from "../../utils/message-channel.js";
 import { ACP_SPAWN_MODES, ACP_SPAWN_STREAM_TARGETS, spawnAcpDirect } from "../acp-spawn.js";
+import { buildCodeClawTaskPacket, formatCodeClawTaskPacket } from "../codeclaw-task-packet.js";
 import { optionalStringEnum } from "../schema/typebox.js";
 import type { SpawnedToolContext } from "../spawned-context.js";
 import { SUBAGENT_SPAWN_MODES, spawnSubagentDirect } from "../subagent-spawn.js";
 import type { AnyAgentTool } from "./common.js";
-import { jsonResult, readStringParam, ToolInputError } from "./common.js";
+import { jsonResult, readStringArrayParam, readStringParam, ToolInputError } from "./common.js";
 
 const SESSIONS_SPAWN_RUNTIMES = ["subagent", "acp"] as const;
 const SESSIONS_SPAWN_SANDBOX_MODES = ["inherit", "require"] as const;
@@ -61,6 +62,16 @@ const SessionsSpawnToolSchema = Type.Object({
       // Where the spawned agent should look for attachments.
       // Kept as a hint; implementation materializes into the child workspace.
       mountPath: Type.Optional(Type.String()),
+    }),
+  ),
+  codeclawTask: Type.Optional(
+    Type.Object({
+      title: Type.Optional(Type.String()),
+      repoRoot: Type.String(),
+      workspaceName: Type.Optional(Type.String()),
+      acceptanceCriteria: Type.Optional(Type.Array(Type.String())),
+      constraints: Type.Optional(Type.Array(Type.String())),
+      maxContextChars: Type.Optional(Type.Number({ minimum: 100 })),
     }),
   ),
 });
@@ -126,6 +137,10 @@ export function createSessionsSpawnTool(
             mimeType?: string;
           }>)
         : undefined;
+      const codeClawTask =
+        params.codeclawTask && typeof params.codeclawTask === "object"
+          ? (params.codeclawTask as Record<string, unknown>)
+          : undefined;
 
       if (streamTo && runtime !== "acp") {
         return jsonResult({
@@ -141,6 +156,25 @@ export function createSessionsSpawnTool(
         });
       }
 
+      let effectiveTask = task;
+      if (codeClawTask) {
+        const repoRoot = readStringParam(codeClawTask, "repoRoot", { required: true });
+        const packet = await buildCodeClawTaskPacket({
+          objective: task,
+          repoRoot,
+          title: readStringParam(codeClawTask, "title"),
+          workspaceName: readStringParam(codeClawTask, "workspaceName"),
+          acceptanceCriteria: readStringArrayParam(codeClawTask, "acceptanceCriteria") ?? [],
+          constraints: readStringArrayParam(codeClawTask, "constraints") ?? [],
+          maxContextChars:
+            typeof codeClawTask.maxContextChars === "number" &&
+            Number.isFinite(codeClawTask.maxContextChars)
+              ? codeClawTask.maxContextChars
+              : undefined,
+        });
+        effectiveTask = `${formatCodeClawTaskPacket(packet)}\n\n## Requested Work\n${task}`;
+      }
+
       if (runtime === "acp") {
         if (Array.isArray(attachments) && attachments.length > 0) {
           return jsonResult({
@@ -151,7 +185,7 @@ export function createSessionsSpawnTool(
         }
         const result = await spawnAcpDirect(
           {
-            task,
+            task: effectiveTask,
             label: label || undefined,
             agentId: requestedAgentId,
             resumeSessionId,
@@ -175,7 +209,7 @@ export function createSessionsSpawnTool(
 
       const result = await spawnSubagentDirect(
         {
-          task,
+          task: effectiveTask,
           label: label || undefined,
           agentId: requestedAgentId,
           model: modelOverride,
