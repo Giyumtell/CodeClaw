@@ -137,3 +137,6 @@ docs/superpowers
 
 # Deprecated changelog fragment workflow
 changelog/fragments/
+#AlphaIota
+.alphai/github-token.json
+.alphai/config.yaml
