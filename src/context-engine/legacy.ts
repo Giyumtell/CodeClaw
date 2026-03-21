@@ -1,6 +1,7 @@
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import { delegateCompactionToRuntime } from "./delegate.js";
 import { registerContextEngineForOwner } from "./registry.js";
+import { selectAlphaIotaContextSlice } from "./alphai-context-slice.js";
 import type {
   ContextEngine,
   ContextEngineInfo,
@@ -41,13 +42,25 @@ export class LegacyContextEngine implements ContextEngine {
     messages: AgentMessage[];
     tokenBudget?: number;
     model?: string;
+    prompt?: string;
+    workspaceDir?: string;
   }): Promise<AssembleResult> {
+    let systemPromptAddition: string | undefined;
+    if (params.workspaceDir && params.prompt) {
+      const slice = await selectAlphaIotaContextSlice({
+        repoRoot: params.workspaceDir,
+        prompt: params.prompt,
+      });
+      systemPromptAddition = slice?.systemPromptAddition;
+    }
+
     // Pass-through: the existing sanitize -> validate -> limit -> repair pipeline
     // in attempt.ts handles context assembly for the legacy engine.
     // We just return the messages as-is with a rough token estimate.
     return {
       messages: params.messages,
       estimatedTokens: 0, // Caller handles estimation
+      ...(systemPromptAddition ? { systemPromptAddition } : {}),
     };
   }
 

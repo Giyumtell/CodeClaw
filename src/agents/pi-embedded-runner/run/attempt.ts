@@ -2426,6 +2426,7 @@ export async function runEmbeddedAttempt(
               messages: activeSession.messages,
               tokenBudget: params.contextTokenBudget,
               model: params.modelId,
+              workspaceDir: effectiveWorkspace,
               ...(params.prompt !== undefined ? { prompt: params.prompt } : {}),
             });
             if (assembled.messages !== activeSession.messages) {

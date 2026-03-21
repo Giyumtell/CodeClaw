@@ -77,6 +77,7 @@ class MockContextEngine implements ContextEngine {
     sessionKey?: string;
     messages: AgentMessage[];
     tokenBudget?: number;
+    workspaceDir?: string;
   }): Promise<AssembleResult> {
     return {
       messages: params.messages,
@@ -814,6 +815,37 @@ describe("assemble() prompt forwarding", () => {
 // ═══════════════════════════════════════════════════════════════════════════
 // 6. Initialization guard
 // ═══════════════════════════════════════════════════════════════════════════
+
+describe("Legacy AlphaIota repo context", () => {
+  it("adds AlphaIota system prompt context when workspace has .alphai/context.txt", async () => {
+    const { mkdir, mkdtemp, rm, writeFile } = await import("node:fs/promises");
+    const os = await import("node:os");
+    const path = await import("node:path");
+
+    const repoRoot = await mkdtemp(path.join(os.tmpdir(), "legacy-alphai-"));
+    try {
+      const alphaiDir = path.join(repoRoot, ".alphai");
+      await mkdir(alphaiDir, { recursive: true });
+      await writeFile(
+        path.join(alphaiDir, "context.txt"),
+        `# DemoRepo — DemoRepo\n\nsrc/\n  context-engine/\n    src/context-engine/legacy.ts — legacy.ts\n      LegacyContextEngine [class] — LegacyContextEngine\n`,
+      );
+
+      const engine = new LegacyContextEngine();
+      const result = await engine.assemble({
+        sessionId: "s1",
+        messages: [makeMockMessage("user", "hello")],
+        workspaceDir: repoRoot,
+        prompt: "update legacy context engine",
+      });
+
+      expect(result.systemPromptAddition).toContain("AlphaIota repo context is available");
+      expect(result.systemPromptAddition).toContain("src/context-engine/legacy.ts");
+    } finally {
+      await rm(repoRoot, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("Initialization guard", () => {
   it("ensureContextEnginesInitialized() is idempotent and registers legacy", async () => {

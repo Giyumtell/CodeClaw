@@ -185,6 +185,8 @@ export interface ContextEngine {
     model?: string;
     /** The incoming user prompt for this turn (useful for retrieval-oriented engines). */
     prompt?: string;
+    /** Active workspace directory for repo-aware context assembly. */
+    workspaceDir?: string;
   }): Promise<AssembleResult>;
 
   /**

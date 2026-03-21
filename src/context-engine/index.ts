@@ -26,3 +26,6 @@ export { ensureContextEnginesInitialized } from "./init.js";
 
 export { discoverAlphaIotaArtifacts, hasAlphaIotaArtifacts } from "./alphai-artifacts.js";
 export type { AlphaIotaArtifacts } from "./alphai-artifacts.js";
+
+export { selectAlphaIotaContextSlice } from "./alphai-context-slice.js";
+export type { AlphaIotaContextSlice } from "./alphai-context-slice.js";
