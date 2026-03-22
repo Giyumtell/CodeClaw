@@ -15,6 +15,30 @@ describe("CODECLAW_ROLES", () => {
   it("contains all role definitions", () => {
     expect(Object.keys(CODECLAW_ROLES).toSorted()).toEqual([...ROLES].toSorted());
   });
+
+  it("defines hierarchy with reportsTo and manages", () => {
+    expect(CODECLAW_ROLES["team-lead"].reportsTo).toBeUndefined();
+    expect(CODECLAW_ROLES["team-lead"].manages).toEqual(["project-manager", "reviewer"]);
+
+    expect(CODECLAW_ROLES["project-manager"].reportsTo).toBe("team-lead");
+    expect(CODECLAW_ROLES["project-manager"].manages).toEqual([
+      "developer",
+      "tester",
+      "business-analyst",
+    ]);
+
+    expect(CODECLAW_ROLES["business-analyst"].reportsTo).toBe("project-manager");
+    expect(CODECLAW_ROLES["business-analyst"].manages).toEqual([]);
+
+    expect(CODECLAW_ROLES.developer.reportsTo).toBe("project-manager");
+    expect(CODECLAW_ROLES.developer.manages).toEqual([]);
+
+    expect(CODECLAW_ROLES.tester.reportsTo).toBe("project-manager");
+    expect(CODECLAW_ROLES.tester.manages).toEqual([]);
+
+    expect(CODECLAW_ROLES.reviewer.reportsTo).toBe("team-lead");
+    expect(CODECLAW_ROLES.reviewer.manages).toEqual([]);
+  });
 });
 
 describe("buildRolePrompt", () => {

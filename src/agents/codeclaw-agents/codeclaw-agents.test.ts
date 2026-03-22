@@ -55,6 +55,15 @@ describe("codeclaw agents", () => {
     }
   });
 
+  it("soul templates encode chain of command", () => {
+    expect(generateRoleSoul("team-lead")).toContain("User -> Team Lead");
+    expect(generateRoleSoul("project-manager")).toContain("report to the Team Lead");
+    expect(generateRoleSoul("business-analyst")).toContain("report to the PM");
+    expect(generateRoleSoul("developer")).toContain("report to the PM");
+    expect(generateRoleSoul("tester")).toContain("report to the PM");
+    expect(generateRoleSoul("reviewer")).toContain("report directly to the Team Lead");
+  });
+
   it("ensureRoleAgentDirs creates all directories and SOUL.md files", async () => {
     const baseDir = await makeTempDir();
 

@@ -12,6 +12,8 @@ export interface CodeClawRoleDefinition {
   role: CodeClawRole;
   displayName: string;
   description: string;
+  reportsTo?: CodeClawRole;
+  manages: CodeClawRole[];
   contextStrategy: CodeClawContextStrategy;
   allowedActions: string[];
   forbiddenActions: string[];
@@ -24,6 +26,7 @@ export const CODECLAW_ROLES: Record<CodeClawRole, CodeClawRoleDefinition> = {
     displayName: "Team Lead",
     description:
       "Decomposes goals into tasks, delegates role work, and owns architecture decisions.",
+    manages: ["project-manager", "reviewer"],
     contextStrategy: "full",
     allowedActions: [
       "Read any file",
@@ -45,6 +48,8 @@ export const CODECLAW_ROLES: Record<CodeClawRole, CodeClawRoleDefinition> = {
     displayName: "Project Manager",
     description:
       "Tracks milestones, blockers, and delivery status without touching implementation.",
+    reportsTo: "team-lead",
+    manages: ["developer", "tester", "business-analyst"],
     contextStrategy: "state-only",
     allowedActions: [
       "Read project and task state",
@@ -66,6 +71,8 @@ export const CODECLAW_ROLES: Record<CodeClawRole, CodeClawRoleDefinition> = {
     role: "business-analyst",
     displayName: "Business Analyst",
     description: "Translates user goals into concrete requirements and acceptance criteria.",
+    reportsTo: "project-manager",
+    manages: [],
     contextStrategy: "summary",
     allowedActions: [
       "Read goals and existing specs",
@@ -87,6 +94,8 @@ export const CODECLAW_ROLES: Record<CodeClawRole, CodeClawRoleDefinition> = {
     role: "developer",
     displayName: "Developer",
     description: "Implements assigned tasks within scope and architecture constraints.",
+    reportsTo: "project-manager",
+    manages: [],
     contextStrategy: "scoped",
     allowedActions: [
       "Read and write source files within assigned scope",
@@ -110,6 +119,8 @@ export const CODECLAW_ROLES: Record<CodeClawRole, CodeClawRoleDefinition> = {
     displayName: "Tester",
     description:
       "Validates behavior against acceptance criteria with evidence-driven test results.",
+    reportsTo: "project-manager",
+    manages: [],
     contextStrategy: "scoped",
     allowedActions: [
       "Read source files",
@@ -132,6 +143,8 @@ export const CODECLAW_ROLES: Record<CodeClawRole, CodeClawRoleDefinition> = {
     displayName: "Reviewer",
     description:
       "Reviews diffs for correctness, security, maintainability, and architectural drift.",
+    reportsTo: "team-lead",
+    manages: [],
     contextStrategy: "full",
     allowedActions: [
       "Read any source file",
