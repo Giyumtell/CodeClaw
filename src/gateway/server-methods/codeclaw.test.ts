@@ -149,4 +149,32 @@ describe("codeclaw gateway handlers", () => {
     expect(call[1]?.step?.taskId).toBeTypeOf("number");
     expect(call[1]?.spawnParams?.agentId).toBeTypeOf("string");
   });
+
+  it("codeclaw.complete marks task done", async () => {
+    const repoRoot = await makeTempDir("codeclaw-repo");
+    const agentBaseDir = await makeTempDir("codeclaw-agents");
+    await invoke("codeclaw.plan", {
+      repoRoot,
+      projectName: "Test",
+      userGoal: "Test complete",
+      agentBaseDir,
+    });
+    await invoke("codeclaw.execute", { repoRoot, agentBaseDir });
+    const board = await readBoard(repoRoot);
+    const inProgressTask = board?.tasks.find((task) => task.status === "in-progress");
+    expect(inProgressTask).toBeTruthy();
+
+    const respond = await invoke("codeclaw.complete", {
+      repoRoot,
+      taskId: inProgressTask!.id,
+      success: true,
+    });
+    const call = respond.mock.calls[0] as [boolean, { completed: boolean } | undefined];
+    expect(call[0]).toBe(true);
+    expect(call[1]?.completed).toBe(true);
+
+    const updatedBoard = await readBoard(repoRoot);
+    const doneTask = updatedBoard?.tasks.find((task) => task.id === inProgressTask!.id);
+    expect(doneTask?.status).toBe("done");
+  });
 });

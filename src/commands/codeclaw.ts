@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { formatBoardMarkdown } from "../agents/codeclaw-board/board-format.js";
 import { readBoard } from "../agents/codeclaw-board/board-io.js";
-import { prepareNextExecution } from "../agents/codeclaw-orchestrator/execute.js";
+import { completeExecution, prepareNextExecution } from "../agents/codeclaw-orchestrator/execute.js";
 import { initCodeClawProject } from "../agents/codeclaw-orchestrator/init.js";
 import { getNextCodeClawStep, planCodeClawRun } from "../agents/codeclaw-orchestrator/runner.js";
 import { resolveStateDir } from "../config/paths.js";
@@ -434,4 +434,110 @@ export async function codeClawExecuteCommand(
   );
   runtime.log(`Label: ${execution.spawnParams.label}`);
   runtime.log("Use --spawn to launch this step via gateway.");
+}
+
+export async function codeClawCompleteCommand(
+  opts: {
+    repoRoot?: string;
+    taskId: number;
+    success?: boolean;
+    notes?: string;
+    json?: boolean;
+  },
+  runtime: RuntimeEnv,
+): Promise<void> {
+  const repoRoot = path.resolve(opts.repoRoot?.trim() || process.cwd());
+  await completeExecution({
+    repoRoot,
+    taskId: opts.taskId,
+    success: opts.success ?? true,
+    notes: opts.notes,
+  });
+  if (opts.json) {
+    runtime.log(
+      JSON.stringify(
+        { completed: true, taskId: opts.taskId, success: opts.success ?? true },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+  runtime.log(`Task #${opts.taskId} marked as ${opts.success === false ? "blocked" : "done"}`);
+}
+
+export async function codeClawRunAllCommand(
+  opts: {
+    repoRoot?: string;
+    userGoal: string;
+    projectName?: string;
+    agentBaseDir?: string;
+    json?: boolean;
+    dryRun?: boolean;
+  },
+  runtime: RuntimeEnv,
+): Promise<void> {
+  const repoRoot = path.resolve(opts.repoRoot?.trim() || process.cwd());
+
+  runtime.log("Planning run...");
+  const steps = await planCodeClawRun({
+    repoRoot,
+    projectName: opts.projectName ?? path.basename(repoRoot),
+    userGoal: opts.userGoal,
+    agentBaseDir: opts.agentBaseDir,
+  });
+
+  runtime.log(`Planned ${steps.length} steps across ${new Set(steps.map((step) => step.phase)).size} phases`);
+
+  if (opts.dryRun) {
+    for (const step of steps) {
+      runtime.log(`  [${step.phase}] ${step.role} — Task #${step.taskId}: ${step.taskTitle}`);
+    }
+    runtime.log("Dry run complete. Use without --dry-run to execute.");
+    return;
+  }
+
+  let completed = 0;
+  while (true) {
+    const execution = await prepareNextExecution({
+      repoRoot,
+      agentBaseDir: opts.agentBaseDir,
+    });
+
+    if (!execution) {
+      runtime.log(`All ${completed} tasks complete.`);
+      break;
+    }
+
+    runtime.log(
+      `[${execution.step.phase}] Spawning ${execution.step.role} for task #${execution.step.taskId}: ${execution.step.taskTitle}`,
+    );
+
+    const { callGateway, randomIdempotencyKey } = await import("./codeclaw.gateway.runtime.js");
+    await callGateway({
+      method: "agent",
+      params: {
+        message: execution.spawnParams.task,
+        agentId: execution.spawnParams.agentId,
+        model: execution.spawnParams.model,
+        extraSystemPrompt: execution.spawnParams.systemPromptAddition,
+        label: execution.spawnParams.label,
+        idempotencyKey: randomIdempotencyKey(),
+      },
+      expectFinal: true,
+    });
+
+    await completeExecution({
+      repoRoot,
+      taskId: execution.step.taskId,
+      success: true,
+    });
+
+    completed++;
+    runtime.log(`  ✓ Task #${execution.step.taskId} complete (${completed}/${steps.length})`);
+  }
+
+  if (opts.json) {
+    runtime.log(JSON.stringify({ completed, total: steps.length }, null, 2));
+  }
 }

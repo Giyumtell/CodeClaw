@@ -6,9 +6,11 @@ import {
   assignCodeClawTask,
   codeClawAssignCommand,
   codeClawBoardCommand,
+  codeClawCompleteCommand,
   codeClawExecuteCommand,
   codeClawInitCommand,
   codeClawNextCommand,
+  codeClawRunAllCommand,
   codeClawRunCommand,
   codeClawStatusCommand,
   getCodeClawStatus,
@@ -198,5 +200,60 @@ describe("CodeClaw commands", () => {
     const output = runtime.log.mock.calls.map((call) => String(call[0])).join("\n");
     expect(output).toContain("Prepared [requirements] business-analyst");
     expect(output).toContain("Use --spawn to launch this step via gateway.");
+  });
+
+  it("codeClawCompleteCommand marks task done", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-repo-"));
+    const agentBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-agents-"));
+    tempRoots.push(repoRoot, agentBaseDir);
+    const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };
+
+    await codeClawRunCommand(
+      {
+        repoRoot,
+        userGoal: "Test complete flow",
+        projectName: "TestProject",
+        agentBaseDir,
+      },
+      runtime,
+    );
+
+    await codeClawExecuteCommand({ repoRoot, agentBaseDir }, runtime);
+    runtime.log.mockClear();
+
+    await codeClawCompleteCommand(
+      {
+        repoRoot,
+        taskId: 1,
+        success: true,
+      },
+      runtime,
+    );
+
+    const output = runtime.log.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(output).toContain("Task #1 marked as done");
+  });
+
+  it("codeClawRunAllCommand dry-run shows plan", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-repo-"));
+    const agentBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-agents-"));
+    tempRoots.push(repoRoot, agentBaseDir);
+    const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };
+
+    await codeClawRunAllCommand(
+      {
+        repoRoot,
+        userGoal: "Build full pipeline",
+        projectName: "TestProject",
+        agentBaseDir,
+        dryRun: true,
+      },
+      runtime,
+    );
+
+    const output = runtime.log.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(output).toContain("Planned");
+    expect(output).toContain("Dry run complete");
+    expect(output).toContain("business-analyst");
   });
 });

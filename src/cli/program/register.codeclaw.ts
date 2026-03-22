@@ -2,9 +2,11 @@ import type { Command } from "commander";
 import {
   codeClawAssignCommand,
   codeClawBoardCommand,
+  codeClawCompleteCommand,
   codeClawExecuteCommand,
   codeClawInitCommand,
   codeClawNextCommand,
+  codeClawRunAllCommand,
   codeClawRunCommand,
   codeClawStatusCommand,
 } from "../../commands/codeclaw.js";
@@ -120,6 +122,54 @@ export function registerCodeClawCommands(program: Command) {
             agentBaseDir: opts.agentBaseDir as string | undefined,
             json: Boolean(opts.json),
             spawn: Boolean(opts.spawn),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  codeclaw
+    .command("complete")
+    .description("Mark a CodeClaw task as complete or blocked")
+    .requiredOption("--repo-root <dir>", "Repository root")
+    .requiredOption("--task-id <id>", "Task ID", parseInt)
+    .option("--fail", "Mark as blocked instead of done", false)
+    .option("--notes <text>", "Completion notes")
+    .option("--json", "Output JSON", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawCompleteCommand(
+          {
+            repoRoot: opts.repoRoot as string,
+            taskId: opts.taskId as number,
+            success: !opts.fail,
+            notes: opts.notes as string | undefined,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  codeclaw
+    .command("run-all")
+    .description("Plan and execute all CodeClaw steps end-to-end")
+    .option("--repo-root <dir>", "Repository root")
+    .requiredOption("--user-goal <text>", "High-level goal")
+    .option("--project-name <name>", "Project name")
+    .option("--agent-base-dir <dir>", "Agent base directory")
+    .option("--dry-run", "Show plan without executing", false)
+    .option("--json", "Output JSON", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawRunAllCommand(
+          {
+            repoRoot: opts.repoRoot as string | undefined,
+            userGoal: opts.userGoal as string,
+            projectName: opts.projectName as string | undefined,
+            agentBaseDir: opts.agentBaseDir as string | undefined,
+            dryRun: Boolean(opts.dryRun),
+            json: Boolean(opts.json),
           },
           defaultRuntime,
         );

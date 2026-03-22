@@ -3,9 +3,11 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 const codeClawAssignCommandMock = vi.fn();
 const codeClawBoardCommandMock = vi.fn();
+const codeClawCompleteCommandMock = vi.fn();
 const codeClawExecuteCommandMock = vi.fn();
 const codeClawInitCommandMock = vi.fn();
 const codeClawNextCommandMock = vi.fn();
+const codeClawRunAllCommandMock = vi.fn();
 const codeClawRunCommandMock = vi.fn();
 const codeClawStatusCommandMock = vi.fn();
 
@@ -18,9 +20,11 @@ const runtime = {
 vi.mock("../../commands/codeclaw.js", () => ({
   codeClawAssignCommand: codeClawAssignCommandMock,
   codeClawBoardCommand: codeClawBoardCommandMock,
+  codeClawCompleteCommand: codeClawCompleteCommandMock,
   codeClawExecuteCommand: codeClawExecuteCommandMock,
   codeClawInitCommand: codeClawInitCommandMock,
   codeClawNextCommand: codeClawNextCommandMock,
+  codeClawRunAllCommand: codeClawRunAllCommandMock,
   codeClawRunCommand: codeClawRunCommandMock,
   codeClawStatusCommand: codeClawStatusCommandMock,
 }));
@@ -46,9 +50,11 @@ describe("registerCodeClawCommands", () => {
     vi.clearAllMocks();
     codeClawAssignCommandMock.mockResolvedValue(undefined);
     codeClawBoardCommandMock.mockResolvedValue(undefined);
+    codeClawCompleteCommandMock.mockResolvedValue(undefined);
     codeClawExecuteCommandMock.mockResolvedValue(undefined);
     codeClawInitCommandMock.mockResolvedValue(undefined);
     codeClawNextCommandMock.mockResolvedValue(undefined);
+    codeClawRunAllCommandMock.mockResolvedValue(undefined);
     codeClawRunCommandMock.mockResolvedValue(undefined);
     codeClawStatusCommandMock.mockResolvedValue(undefined);
   });
@@ -155,6 +161,59 @@ describe("registerCodeClawCommands", () => {
         agentBaseDir: "/agents",
         json: true,
         spawn: true,
+      },
+      runtime,
+    );
+  });
+
+  it("forwards complete options", async () => {
+    await runCli([
+      "codeclaw",
+      "complete",
+      "--repo-root",
+      "/repo/demo",
+      "--task-id",
+      "5",
+      "--fail",
+      "--notes",
+      "broken",
+      "--json",
+    ]);
+    expect(codeClawCompleteCommandMock).toHaveBeenCalledWith(
+      {
+        repoRoot: "/repo/demo",
+        taskId: 5,
+        success: false,
+        notes: "broken",
+        json: true,
+      },
+      runtime,
+    );
+  });
+
+  it("forwards run-all options", async () => {
+    await runCli([
+      "codeclaw",
+      "run-all",
+      "--repo-root",
+      "/repo/demo",
+      "--user-goal",
+      "Ship it",
+      "--project-name",
+      "Demo",
+      "--agent-base-dir",
+      "/agents",
+      "--dry-run",
+      "--json",
+    ]);
+    expect(codeClawRunAllCommandMock).toHaveBeenCalledWith(
+      {
+        repoRoot: "/repo/demo",
+        userGoal: "Ship it",
+        projectName: "Demo",
+        agentBaseDir: "/agents",
+        dryRun: true,
+        json: true,
       },
       runtime,
     );

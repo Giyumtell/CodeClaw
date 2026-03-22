@@ -113,6 +113,7 @@ const BASE_METHODS = [
   "codeclaw.plan",
   "codeclaw.next",
   "codeclaw.execute",
+  "codeclaw.complete",
   "codeclaw.advance",
   // WebChat WebSocket-native chat methods
   "chat.history",

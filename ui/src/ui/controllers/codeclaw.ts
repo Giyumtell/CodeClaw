@@ -175,3 +175,25 @@ export async function advanceCodeClawTask(
     await loadCodeClawBoard(state);
   }
 }
+
+export async function executeNextStep(state: CodeClawState): Promise<unknown> {
+  if (!state.client || !state.connected) {
+    return null;
+  }
+  return state.client.request("codeclaw.execute", { repoRoot: state.repoRoot.trim() });
+}
+
+export async function completeTask(
+  state: CodeClawState,
+  taskId: number,
+  success: boolean,
+): Promise<unknown> {
+  if (!state.client || !state.connected) {
+    return null;
+  }
+  return state.client.request("codeclaw.complete", {
+    repoRoot: state.repoRoot.trim(),
+    taskId,
+    success,
+  });
+}

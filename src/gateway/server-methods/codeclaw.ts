@@ -6,7 +6,7 @@ import { moveTask } from "../../agents/codeclaw-board/board-ops.js";
 import type { CodeClawTaskStatus } from "../../agents/codeclaw-board/types.js";
 import { readRoleMemory } from "../../agents/codeclaw-memory/memory-io.js";
 import type { RoleMemoryState } from "../../agents/codeclaw-memory/types.js";
-import { prepareNextExecution } from "../../agents/codeclaw-orchestrator/execute.js";
+import { completeExecution, prepareNextExecution } from "../../agents/codeclaw-orchestrator/execute.js";
 import { initCodeClawProject } from "../../agents/codeclaw-orchestrator/init.js";
 import { readOrchestratorState } from "../../agents/codeclaw-orchestrator/orchestrator-io.js";
 import { getNextCodeClawStep, planCodeClawRun } from "../../agents/codeclaw-orchestrator/runner.js";
@@ -144,6 +144,22 @@ export const codeclawHandlers: GatewayRequestHandlers = {
       },
       undefined,
     );
+  },
+  "codeclaw.complete": async ({ params, respond }) => {
+    const repoRoot = typeof params.repoRoot === "string" ? params.repoRoot.trim() : "";
+    const taskId = typeof params.taskId === "number" ? params.taskId : Number.NaN;
+    const success = typeof params.success === "boolean" ? params.success : true;
+    const notes = typeof params.notes === "string" ? params.notes : undefined;
+    if (!repoRoot || Number.isNaN(taskId)) {
+      respond(
+        false,
+        undefined,
+        errorShape(ErrorCodes.INVALID_REQUEST, "repoRoot and taskId required"),
+      );
+      return;
+    }
+    await completeExecution({ repoRoot, taskId, success, notes });
+    respond(true, { completed: true, taskId, success }, undefined);
   },
   "codeclaw.advance": async ({ params, respond }) => {
     const repoRoot = typeof params.repoRoot === "string" ? params.repoRoot.trim() : "";
