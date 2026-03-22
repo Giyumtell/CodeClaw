@@ -642,3 +642,47 @@ export async function codeClawRunAllCommand(
     runtime.log(JSON.stringify({ completed, total: steps.length }, null, 2));
   }
 }
+
+export async function codeClawSessionsCommand(
+  opts: {
+    repoRoot?: string;
+    json?: boolean;
+  },
+  runtime: RuntimeEnv,
+): Promise<void> {
+  const repoRoot = path.resolve(opts.repoRoot?.trim() || process.cwd());
+  const { readPersistentSessions } = await import(
+    "../agents/codeclaw-orchestrator/persistent-sessions.js"
+  );
+  const state = await readPersistentSessions(repoRoot);
+
+  if (!state) {
+    runtime.log("No persistent sessions found. Run 'codeclaw codeclaw init' first.");
+    return;
+  }
+
+  if (opts.json) {
+    runtime.log(JSON.stringify(state, null, 2));
+    return;
+  }
+
+  runtime.log(`Project: ${state.projectName}`);
+  runtime.log(`Repo: ${state.repoRoot}`);
+  runtime.log("");
+
+  const roles = Object.keys(state.sessions) as Array<keyof typeof state.sessions>;
+  for (const role of roles) {
+    const session = state.sessions[role];
+    if (!session) {
+      runtime.log(`  ${role}: (not spawned)`);
+      continue;
+    }
+    const status = session.active ? "active" : "inactive";
+    runtime.log(`  ${role}: ${session.agentId} [${status}]`);
+    if (session.sessionKey) {
+      runtime.log(`    session: ${session.sessionKey}`);
+    }
+    runtime.log(`    spawned: ${session.spawnedAt}`);
+    runtime.log(`    last active: ${session.lastActiveAt}`);
+  }
+}

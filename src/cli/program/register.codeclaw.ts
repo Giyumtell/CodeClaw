@@ -9,6 +9,7 @@ import {
   codeClawProgressCommand,
   codeClawRunAllCommand,
   codeClawRunCommand,
+  codeClawSessionsCommand,
   codeClawStatusCommand,
 } from "../../commands/codeclaw.js";
 import { defaultRuntime } from "../../runtime.js";
@@ -230,6 +231,23 @@ export function registerCodeClawCommands(program: Command) {
               ? (opts.acceptance as string[])
               : undefined,
             constraints: Array.isArray(opts.constraint) ? (opts.constraint as string[]) : undefined,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  codeclaw
+    .command("sessions")
+    .description("Show persistent CodeClaw agent sessions (TL/PM/BA/Security)")
+    .option("--repo-root <dir>", "Repository root")
+    .option("--json", "Output JSON instead of text", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawSessionsCommand(
+          {
+            repoRoot: opts.repoRoot as string | undefined,
             json: Boolean(opts.json),
           },
           defaultRuntime,

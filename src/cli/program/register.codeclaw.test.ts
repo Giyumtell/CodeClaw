@@ -11,6 +11,7 @@ const codeClawProgressCommandMock = vi.fn();
 const codeClawRunAllCommandMock = vi.fn();
 const codeClawRunCommandMock = vi.fn();
 const codeClawStatusCommandMock = vi.fn();
+const codeClawSessionsCommandMock = vi.fn();
 
 const runtime = {
   log: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock("../../commands/codeclaw.js", () => ({
   codeClawRunAllCommand: codeClawRunAllCommandMock,
   codeClawRunCommand: codeClawRunCommandMock,
   codeClawStatusCommand: codeClawStatusCommandMock,
+  codeClawSessionsCommand: codeClawSessionsCommandMock,
 }));
 
 vi.mock("../../runtime.js", () => ({
@@ -60,6 +62,7 @@ describe("registerCodeClawCommands", () => {
     codeClawRunAllCommandMock.mockResolvedValue(undefined);
     codeClawRunCommandMock.mockResolvedValue(undefined);
     codeClawStatusCommandMock.mockResolvedValue(undefined);
+    codeClawSessionsCommandMock.mockResolvedValue(undefined);
   });
 
   it("forwards init options", async () => {
@@ -267,6 +270,18 @@ describe("registerCodeClawCommands", () => {
     await runCli(["codeclaw", "status", "--repo-root", "/repo/demo", "--json"]);
 
     expect(codeClawStatusCommandMock).toHaveBeenCalledWith(
+      {
+        repoRoot: "/repo/demo",
+        json: true,
+      },
+      runtime,
+    );
+  });
+
+  it("forwards sessions options", async () => {
+    await runCli(["codeclaw", "sessions", "--repo-root", "/repo/demo", "--json"]);
+
+    expect(codeClawSessionsCommandMock).toHaveBeenCalledWith(
       {
         repoRoot: "/repo/demo",
         json: true,
