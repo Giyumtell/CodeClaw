@@ -107,6 +107,12 @@ const BASE_METHODS = [
   "agent.identity.get",
   "agent.wait",
   "browser.request",
+  "codeclaw.init",
+  "codeclaw.board",
+  "codeclaw.status",
+  "codeclaw.plan",
+  "codeclaw.next",
+  "codeclaw.advance",
   // WebChat WebSocket-native chat methods
   "chat.history",
   "chat.abort",
