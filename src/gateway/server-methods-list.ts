@@ -110,6 +110,7 @@ const BASE_METHODS = [
   "codeclaw.init",
   "codeclaw.board",
   "codeclaw.status",
+  "codeclaw.progress",
   "codeclaw.plan",
   "codeclaw.next",
   "codeclaw.execute",

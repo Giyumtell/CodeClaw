@@ -183,6 +183,13 @@ export async function executeNextStep(state: CodeClawState): Promise<unknown> {
   return state.client.request("codeclaw.execute", { repoRoot: state.repoRoot.trim() });
 }
 
+export async function checkProgress(state: CodeClawState): Promise<unknown> {
+  if (!state.client || !state.connected) {
+    return null;
+  }
+  return state.client.request("codeclaw.progress", { repoRoot: state.repoRoot.trim() });
+}
+
 export async function completeTask(
   state: CodeClawState,
   taskId: number,

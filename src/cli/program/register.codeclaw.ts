@@ -6,6 +6,7 @@ import {
   codeClawExecuteCommand,
   codeClawInitCommand,
   codeClawNextCommand,
+  codeClawProgressCommand,
   codeClawRunAllCommand,
   codeClawRunCommand,
   codeClawStatusCommand,
@@ -98,6 +99,23 @@ export function registerCodeClawCommands(program: Command) {
     .action(async (opts) => {
       await runCommandWithRuntime(defaultRuntime, async () => {
         await codeClawBoardCommand(
+          {
+            repoRoot: opts.repoRoot as string | undefined,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  codeclaw
+    .command("progress")
+    .description("Show CodeClaw phase progress and heartbeat health")
+    .option("--repo-root <dir>", "Repository root")
+    .option("--json", "Output JSON instead of text", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawProgressCommand(
           {
             repoRoot: opts.repoRoot as string | undefined,
             json: Boolean(opts.json),

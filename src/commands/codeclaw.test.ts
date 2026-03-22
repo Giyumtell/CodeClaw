@@ -10,6 +10,7 @@ import {
   codeClawExecuteCommand,
   codeClawInitCommand,
   codeClawNextCommand,
+  codeClawProgressCommand,
   codeClawRunAllCommand,
   codeClawRunCommand,
   codeClawStatusCommand,
@@ -200,6 +201,34 @@ describe("CodeClaw commands", () => {
     const output = runtime.log.mock.calls.map((call) => String(call[0])).join("\n");
     expect(output).toContain("Prepared [requirements] business-analyst");
     expect(output).toContain("Use --spawn to launch this step via gateway.");
+  });
+
+  it("codeClawProgressCommand shows health and progress summary", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-repo-"));
+    const agentBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-agents-"));
+    tempRoots.push(repoRoot, agentBaseDir);
+    const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };
+
+    await codeClawRunCommand(
+      {
+        repoRoot,
+        userGoal: "Build heartbeat checks",
+        projectName: "CodeClaw",
+        agentBaseDir,
+      },
+      runtime,
+    );
+    await codeClawExecuteCommand({ repoRoot, agentBaseDir }, runtime);
+    runtime.log.mockClear();
+
+    await codeClawProgressCommand({ repoRoot }, runtime);
+
+    const output = runtime.log.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(output).toContain("Health: healthy");
+    expect(output).toContain("Phase:");
+    expect(output).toContain("Progress:");
+    expect(output).toContain("Running Agents:");
+    expect(output).toContain("Board Summary:");
   });
 
   it("codeClawCompleteCommand marks task done", async () => {

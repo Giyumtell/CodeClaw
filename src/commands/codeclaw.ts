@@ -3,6 +3,7 @@ import path from "node:path";
 import { formatBoardMarkdown } from "../agents/codeclaw-board/board-format.js";
 import { readBoard } from "../agents/codeclaw-board/board-io.js";
 import { completeExecution, prepareNextExecution } from "../agents/codeclaw-orchestrator/execute.js";
+import { runHeartbeatCheck } from "../agents/codeclaw-orchestrator/heartbeat-monitor.js";
 import { initCodeClawProject } from "../agents/codeclaw-orchestrator/init.js";
 import { getNextCodeClawStep, planCodeClawRun } from "../agents/codeclaw-orchestrator/runner.js";
 import { resolveStateDir } from "../config/paths.js";
@@ -353,6 +354,64 @@ export async function codeClawBoardCommand(
   }
 
   runtime.log(formatBoardMarkdown(board).trimEnd());
+}
+
+export async function codeClawProgressCommand(
+  opts: {
+    repoRoot?: string;
+    json?: boolean;
+  },
+  runtime: RuntimeEnv,
+): Promise<void> {
+  const repoRoot = path.resolve(opts.repoRoot?.trim() || process.cwd());
+  const result = await runHeartbeatCheck({ repoRoot });
+
+  if (opts.json) {
+    runtime.log(JSON.stringify(result, null, 2));
+    return;
+  }
+
+  runtime.log(`Health: ${result.healthy ? "healthy" : "unhealthy"}`);
+
+  if (!result.report) {
+    for (const warning of result.warnings) {
+      runtime.log(`Warning: ${warning}`);
+    }
+    return;
+  }
+
+  runtime.log(`Phase: ${result.report.phase}`);
+  runtime.log(`Progress: ${result.report.completedTasks}/${result.report.totalTasks} tasks complete`);
+
+  if (result.warnings.length > 0) {
+    runtime.log("Warnings:");
+    for (const warning of result.warnings) {
+      runtime.log(`- ${warning}`);
+    }
+  }
+
+  if (result.actions.length > 0) {
+    runtime.log("Actions:");
+    for (const action of result.actions) {
+      runtime.log(`- ${action}`);
+    }
+  }
+
+  runtime.log("Running Agents:");
+  if (result.report.agents.length === 0) {
+    runtime.log("- (none)");
+  } else {
+    for (const agent of result.report.agents) {
+      runtime.log(`- ${agent.label} (${agent.title})`);
+    }
+  }
+
+  runtime.log("Board Summary:");
+  runtime.log(`- backlog: ${result.report.boardSummary.backlog}`);
+  runtime.log(`- in-progress: ${result.report.boardSummary.inProgress}`);
+  runtime.log(`- in-review: ${result.report.boardSummary.inReview}`);
+  runtime.log(`- done: ${result.report.boardSummary.done}`);
+  runtime.log(`- blocked: ${result.report.boardSummary.blocked}`);
 }
 
 export async function codeClawExecuteCommand(

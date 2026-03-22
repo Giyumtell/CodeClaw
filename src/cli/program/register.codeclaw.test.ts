@@ -7,6 +7,7 @@ const codeClawCompleteCommandMock = vi.fn();
 const codeClawExecuteCommandMock = vi.fn();
 const codeClawInitCommandMock = vi.fn();
 const codeClawNextCommandMock = vi.fn();
+const codeClawProgressCommandMock = vi.fn();
 const codeClawRunAllCommandMock = vi.fn();
 const codeClawRunCommandMock = vi.fn();
 const codeClawStatusCommandMock = vi.fn();
@@ -24,6 +25,7 @@ vi.mock("../../commands/codeclaw.js", () => ({
   codeClawExecuteCommand: codeClawExecuteCommandMock,
   codeClawInitCommand: codeClawInitCommandMock,
   codeClawNextCommand: codeClawNextCommandMock,
+  codeClawProgressCommand: codeClawProgressCommandMock,
   codeClawRunAllCommand: codeClawRunAllCommandMock,
   codeClawRunCommand: codeClawRunCommandMock,
   codeClawStatusCommand: codeClawStatusCommandMock,
@@ -54,6 +56,7 @@ describe("registerCodeClawCommands", () => {
     codeClawExecuteCommandMock.mockResolvedValue(undefined);
     codeClawInitCommandMock.mockResolvedValue(undefined);
     codeClawNextCommandMock.mockResolvedValue(undefined);
+    codeClawProgressCommandMock.mockResolvedValue(undefined);
     codeClawRunAllCommandMock.mockResolvedValue(undefined);
     codeClawRunCommandMock.mockResolvedValue(undefined);
     codeClawStatusCommandMock.mockResolvedValue(undefined);
@@ -161,6 +164,18 @@ describe("registerCodeClawCommands", () => {
         agentBaseDir: "/agents",
         json: true,
         spawn: true,
+      },
+      runtime,
+    );
+  });
+
+  it("forwards progress options", async () => {
+    await runCli(["codeclaw", "progress", "--repo-root", "/repo/demo", "--json"]);
+
+    expect(codeClawProgressCommandMock).toHaveBeenCalledWith(
+      {
+        repoRoot: "/repo/demo",
+        json: true,
       },
       runtime,
     );

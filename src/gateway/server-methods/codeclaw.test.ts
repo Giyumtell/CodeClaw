@@ -150,6 +150,28 @@ describe("codeclaw gateway handlers", () => {
     expect(call[1]?.spawnParams?.agentId).toBeTypeOf("string");
   });
 
+  it("codeclaw.progress returns heartbeat check result", async () => {
+    const repoRoot = await makeTempDir("codeclaw-repo");
+    const agentBaseDir = await makeTempDir("codeclaw-agents");
+    await invoke("codeclaw.plan", {
+      repoRoot,
+      projectName: "Gateway Project",
+      userGoal: "Ship gateway handlers",
+      agentBaseDir,
+    });
+    await invoke("codeclaw.execute", { repoRoot, agentBaseDir });
+
+    const respond = await invoke("codeclaw.progress", { repoRoot });
+    const call = respond.mock.calls[0] as [
+      boolean,
+      { healthy: boolean; report?: { totalTasks: number } } | undefined,
+    ];
+
+    expect(call[0]).toBe(true);
+    expect(call[1]?.healthy).toBe(true);
+    expect(call[1]?.report?.totalTasks).toBe(6);
+  });
+
   it("codeclaw.complete marks task done", async () => {
     const repoRoot = await makeTempDir("codeclaw-repo");
     const agentBaseDir = await makeTempDir("codeclaw-agents");

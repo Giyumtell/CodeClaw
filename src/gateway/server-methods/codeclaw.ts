@@ -7,6 +7,7 @@ import type { CodeClawTaskStatus } from "../../agents/codeclaw-board/types.js";
 import { readRoleMemory } from "../../agents/codeclaw-memory/memory-io.js";
 import type { RoleMemoryState } from "../../agents/codeclaw-memory/types.js";
 import { completeExecution, prepareNextExecution } from "../../agents/codeclaw-orchestrator/execute.js";
+import { runHeartbeatCheck } from "../../agents/codeclaw-orchestrator/heartbeat-monitor.js";
 import { initCodeClawProject } from "../../agents/codeclaw-orchestrator/init.js";
 import { readOrchestratorState } from "../../agents/codeclaw-orchestrator/orchestrator-io.js";
 import { getNextCodeClawStep, planCodeClawRun } from "../../agents/codeclaw-orchestrator/runner.js";
@@ -90,6 +91,16 @@ export const codeclawHandlers: GatewayRequestHandlers = {
       },
       undefined,
     );
+  },
+  "codeclaw.progress": async ({ params, respond }) => {
+    const repoRoot = typeof params.repoRoot === "string" ? params.repoRoot.trim() : "";
+    if (!repoRoot) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "repoRoot required"));
+      return;
+    }
+
+    const result = await runHeartbeatCheck({ repoRoot });
+    respond(true, result, undefined);
   },
   "codeclaw.plan": async ({ params, respond }) => {
     const repoRoot = typeof params.repoRoot === "string" ? params.repoRoot.trim() : "";
