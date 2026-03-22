@@ -55,6 +55,10 @@ export const es: TranslationMap = {
     debug: "Instantáneas de la puerta de enlace, eventos y llamadas RPC manuales.",
     logs: "Seguimiento en vivo de los registros de la puerta de enlace.",
   },
+  codeclawRoles: {
+    security: "security",
+    securityEngineer: "Security Engineer",
+  },
   overview: {
     access: {
       title: "Acceso a la puerta de enlace",

@@ -25,7 +25,7 @@ afterEach(async () => {
 });
 
 describe("codeclaw orchestrator runner", () => {
-  it("planCodeClawRun creates 6 board tasks", async () => {
+  it("planCodeClawRun creates 7 board tasks", async () => {
     const repoRoot = await makeTempDir("codeclaw-runner-repo");
     const agentBaseDir = await makeTempDir("codeclaw-runner-agents");
 
@@ -37,10 +37,10 @@ describe("codeclaw orchestrator runner", () => {
     });
 
     const board = await readBoard(repoRoot);
-    expect(board?.tasks).toHaveLength(6);
+    expect(board?.tasks).toHaveLength(7);
   });
 
-  it("planCodeClawRun returns 6 steps in lifecycle order", async () => {
+  it("planCodeClawRun returns 7 steps in lifecycle order", async () => {
     const repoRoot = await makeTempDir("codeclaw-runner-repo");
     const agentBaseDir = await makeTempDir("codeclaw-runner-agents");
 
@@ -51,18 +51,19 @@ describe("codeclaw orchestrator runner", () => {
       agentBaseDir,
     });
 
-    expect(steps).toHaveLength(6);
+    expect(steps).toHaveLength(7);
     expect(steps.map((step) => step.phase)).toEqual([
       "requirements",
       "planning",
       "development",
       "testing",
       "review",
+      "security",
       "tracking",
     ]);
   });
 
-  it("planCodeClawRun uses BA, TL, Dev, Tester, Reviewer, PM role order", async () => {
+  it("planCodeClawRun uses BA, TL, Dev, Tester, Reviewer, Security, PM role order", async () => {
     const repoRoot = await makeTempDir("codeclaw-runner-repo");
     const agentBaseDir = await makeTempDir("codeclaw-runner-agents");
 
@@ -79,6 +80,7 @@ describe("codeclaw orchestrator runner", () => {
       "developer",
       "tester",
       "reviewer",
+      "security",
       "project-manager",
     ]);
   });

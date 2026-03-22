@@ -4,6 +4,10 @@ import path from "node:path";
 import { ensureRoleAgentDirs } from "../codeclaw-agents/agent-setup.js";
 import { getDefaultCodeClawAgentConfigs } from "../codeclaw-agents/types.js";
 import { initBoard } from "../codeclaw-board/board-io.js";
+import {
+  createPersistentSessionsState,
+  writePersistentSessions,
+} from "./persistent-sessions.js";
 
 function resolveDefaultAgentBaseDir(): string {
   return path.join(os.homedir(), ".codeclaw", "agents");
@@ -21,6 +25,10 @@ export async function initCodeClawProject(params: {
   await mkdir(codeClawDir, { recursive: true });
   await initBoard(repoRoot, params.projectName);
   await ensureRoleAgentDirs(agentBaseDir);
+  await writePersistentSessions(
+    repoRoot,
+    createPersistentSessionsState(params.projectName, repoRoot),
+  );
 
   return {
     boardPath: path.join(codeClawDir, "board.md"),

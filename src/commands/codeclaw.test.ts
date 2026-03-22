@@ -118,7 +118,7 @@ describe("CodeClaw commands", () => {
     await fs.access(path.join(repoRoot, ".codeclaw", "board-state.json"));
   });
 
-  it("codeClawRunCommand prints run plan with 6 steps", async () => {
+  it("codeClawRunCommand prints run plan with 7 steps", async () => {
     const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-repo-"));
     const agentBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-agents-"));
     tempRoots.push(repoRoot, agentBaseDir);
@@ -137,7 +137,7 @@ describe("CodeClaw commands", () => {
     const loggedLines = runtime.log.mock.calls
       .map((call) => String(call[0]))
       .filter((line) => line.startsWith("- ["));
-    expect(loggedLines).toHaveLength(6);
+    expect(loggedLines).toHaveLength(7);
   });
 
   it("codeClawBoardCommand shows empty board after init", async () => {

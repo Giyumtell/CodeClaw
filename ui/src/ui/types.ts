@@ -686,6 +686,7 @@ export type CodeClawRole =
   | "team-lead"
   | "project-manager"
   | "business-analyst"
+  | "security"
   | "developer"
   | "tester"
   | "reviewer";

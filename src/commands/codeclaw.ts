@@ -440,25 +440,38 @@ export async function codeClawExecuteCommand(
 
   if (opts.spawn) {
     const { callGateway, randomIdempotencyKey } = await import("./codeclaw.gateway.runtime.js");
-    const response = await callGateway({
-      method: "agent",
-      params: {
-        message: execution.spawnParams.task,
-        agentId: execution.spawnParams.agentId,
-        model: execution.spawnParams.model,
-        extraSystemPrompt: execution.spawnParams.systemPromptAddition,
-        label: execution.spawnParams.label,
-        idempotencyKey: randomIdempotencyKey(),
-      },
-      expectFinal: true,
-    });
+    const response =
+      execution.action === "send" && execution.sendParams
+        ? await callGateway({
+            method: "sessions.send",
+            params: {
+              key: execution.sendParams.key,
+              message: execution.sendParams.message,
+            },
+            expectFinal: true,
+          })
+        : await callGateway({
+            method: "agent",
+            params: {
+              message: execution.spawnParams?.task,
+              agentId: execution.spawnParams?.agentId,
+              model: execution.spawnParams?.model,
+              extraSystemPrompt: execution.spawnParams?.systemPromptAddition,
+              label: execution.spawnParams?.label,
+              sessionKey: execution.spawnParams?.sessionKey,
+              idempotencyKey: randomIdempotencyKey(),
+            },
+            expectFinal: true,
+          });
 
     if (opts.json) {
       runtime.log(
         JSON.stringify(
           {
             step: execution.step,
+            action: execution.action,
             spawnParams: execution.spawnParams,
+            sendParams: execution.sendParams,
             gateway: response,
           },
           null,
@@ -468,8 +481,15 @@ export async function codeClawExecuteCommand(
       return;
     }
 
+    if (execution.action === "send" && execution.sendParams) {
+      runtime.log(
+        `Sent [${execution.step.phase}] ${execution.step.role} directive to existing session ${execution.sendParams.key}`,
+      );
+      return;
+    }
+
     runtime.log(
-      `Spawned [${execution.step.phase}] ${execution.step.role} for task #${execution.step.taskId} (${execution.spawnParams.agentId})`,
+      `Spawned [${execution.step.phase}] ${execution.step.role} for task #${execution.step.taskId} (${execution.spawnParams?.agentId})`,
     );
     return;
   }
@@ -479,7 +499,9 @@ export async function codeClawExecuteCommand(
       JSON.stringify(
         {
           step: execution.step,
+          action: execution.action,
           spawnParams: execution.spawnParams,
+          sendParams: execution.sendParams,
         },
         null,
         2,
@@ -488,10 +510,18 @@ export async function codeClawExecuteCommand(
     return;
   }
 
+  if (execution.action === "send" && execution.sendParams) {
+    runtime.log(
+      `Prepared [${execution.step.phase}] ${execution.step.role} for existing session ${execution.sendParams.key}`,
+    );
+    runtime.log("Use --spawn to send the directive into the active persistent session.");
+    return;
+  }
+
   runtime.log(
-    `Prepared [${execution.step.phase}] ${execution.step.role} for task #${execution.step.taskId} (${execution.spawnParams.agentId})`,
+    `Prepared [${execution.step.phase}] ${execution.step.role} for task #${execution.step.taskId} (${execution.spawnParams?.agentId})`,
   );
-  runtime.log(`Label: ${execution.spawnParams.label}`);
+  runtime.log(`Label: ${execution.spawnParams?.label}`);
   runtime.log("Use --spawn to launch this step via gateway.");
 }
 
@@ -573,18 +603,30 @@ export async function codeClawRunAllCommand(
     );
 
     const { callGateway, randomIdempotencyKey } = await import("./codeclaw.gateway.runtime.js");
-    await callGateway({
-      method: "agent",
-      params: {
-        message: execution.spawnParams.task,
-        agentId: execution.spawnParams.agentId,
-        model: execution.spawnParams.model,
-        extraSystemPrompt: execution.spawnParams.systemPromptAddition,
-        label: execution.spawnParams.label,
-        idempotencyKey: randomIdempotencyKey(),
-      },
-      expectFinal: true,
-    });
+    if (execution.action === "send" && execution.sendParams) {
+      await callGateway({
+        method: "sessions.send",
+        params: {
+          key: execution.sendParams.key,
+          message: execution.sendParams.message,
+        },
+        expectFinal: true,
+      });
+    } else {
+      await callGateway({
+        method: "agent",
+        params: {
+          message: execution.spawnParams?.task,
+          agentId: execution.spawnParams?.agentId,
+          model: execution.spawnParams?.model,
+          extraSystemPrompt: execution.spawnParams?.systemPromptAddition,
+          label: execution.spawnParams?.label,
+          sessionKey: execution.spawnParams?.sessionKey,
+          idempotencyKey: randomIdempotencyKey(),
+        },
+        expectFinal: true,
+      });
+    }
 
     await completeExecution({
       repoRoot,

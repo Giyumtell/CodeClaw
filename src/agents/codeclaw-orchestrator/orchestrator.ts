@@ -54,6 +54,8 @@ function determineNextPhase(
   const devTasks = tasks.filter((task) => isRoleTask(task, "developer"));
   const testerTasks = tasks.filter((task) => isRoleTask(task, "tester"));
   const reviewerTasks = tasks.filter((task) => isRoleTask(task, "reviewer"));
+  const securityTasks = tasks.filter((task) => isRoleTask(task, "security"));
+  const pmTasks = tasks.filter((task) => isRoleTask(task, "project-manager"));
   const allDone = tasks.every((task) => task.status === "done");
 
   if (allDone && state.currentPhase !== "requirements") {
@@ -90,6 +92,22 @@ function determineNextPhase(
       return "rework";
     }
     if (everyTaskInStatusSet(reviewerTasks, new Set(["done"]))) {
+      return securityTasks.length > 0 ? "security" : "tracking";
+    }
+  }
+
+  if (
+    state.currentPhase === "security" &&
+    everyTaskInStatusSet(securityTasks, new Set(["in-review", "done"]))
+  ) {
+    return "tracking";
+  }
+
+  if (state.currentPhase === "tracking") {
+    if (pmTasks.length === 0) {
+      return "done";
+    }
+    if (everyTaskInStatusSet(pmTasks, new Set(["done"]))) {
       return "done";
     }
   }

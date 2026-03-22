@@ -67,6 +67,10 @@ export const pt_BR: TranslationMap = {
     debug: "Snapshots, eventos, RPC.",
     logs: "Logs ao vivo do gateway.",
   },
+  codeclawRoles: {
+    security: "security",
+    securityEngineer: "Security Engineer",
+  },
   overview: {
     access: {
       title: "Acesso ao Gateway",

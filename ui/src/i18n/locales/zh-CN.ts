@@ -67,6 +67,10 @@ export const zh_CN: TranslationMap = {
     debug: "快照、事件、RPC。",
     logs: "实时网关日志。",
   },
+  codeclawRoles: {
+    security: "security",
+    securityEngineer: "Security Engineer",
+  },
   overview: {
     access: {
       title: "网关访问",

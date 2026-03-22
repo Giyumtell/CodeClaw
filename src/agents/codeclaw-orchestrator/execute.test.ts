@@ -40,9 +40,10 @@ describe("codeclaw orchestrator execute", () => {
     const result = await prepareNextExecution({ repoRoot, agentBaseDir });
 
     expect(result).not.toBeNull();
-    expect(result?.spawnParams.agentId).toBeTypeOf("string");
-    expect(result?.spawnParams.task).toContain("# CodeClaw Task");
-    expect(result?.spawnParams.label).toContain(`task-${result?.step.taskId}`);
+    expect(result?.action).toBe("spawn");
+    expect(result?.spawnParams?.agentId).toBeTypeOf("string");
+    expect(result?.spawnParams?.task).toContain("# CodeClaw Task");
+    expect(result?.spawnParams?.label).toContain(`task-${result?.step.taskId}`);
 
     const board = await readBoard(repoRoot);
     const task = board?.tasks.find((entry) => entry.id === result?.step.taskId);

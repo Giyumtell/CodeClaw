@@ -6,6 +6,7 @@ const ROLES: CodeClawRole[] = [
   "team-lead",
   "project-manager",
   "business-analyst",
+  "security",
   "developer",
   "tester",
   "reviewer",
@@ -29,6 +30,9 @@ describe("CODECLAW_ROLES", () => {
 
     expect(CODECLAW_ROLES["business-analyst"].reportsTo).toBe("project-manager");
     expect(CODECLAW_ROLES["business-analyst"].manages).toEqual([]);
+
+    expect(CODECLAW_ROLES.security.reportsTo).toBe("business-analyst");
+    expect(CODECLAW_ROLES.security.manages).toEqual([]);
 
     expect(CODECLAW_ROLES.developer.reportsTo).toBe("project-manager");
     expect(CODECLAW_ROLES.developer.manages).toEqual([]);

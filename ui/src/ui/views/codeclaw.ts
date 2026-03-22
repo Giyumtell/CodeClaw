@@ -22,6 +22,7 @@ const LIFECYCLE_ORDER: CodeClawRole[] = [
   "developer",
   "tester",
   "reviewer",
+  "security",
   "project-manager",
 ];
 
@@ -67,6 +68,8 @@ function roleColor(role: CodeClawRole | undefined): string {
       return "#0369a1";
     case "reviewer":
       return "#b45309";
+    case "security":
+      return "#b91c1c";
     case "project-manager":
       return "#be123c";
     default:
@@ -193,7 +196,7 @@ function renderLifecycle(props: CodeClawProps) {
       <div class="row" style="justify-content: space-between;">
         <div>
           <div class="card-title">Run Plan</div>
-          <div class="card-sub">BA → TL → Dev → Tester → Reviewer → PM</div>
+          <div class="card-sub">BA → TL → Dev → Tester → Reviewer → Security → PM</div>
         </div>
         <button class="btn" ?disabled=${props.loading} @click=${props.onExecuteNextStep}>
           Execute Next Step

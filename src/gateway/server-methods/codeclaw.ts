@@ -10,6 +10,14 @@ import { completeExecution, prepareNextExecution } from "../../agents/codeclaw-o
 import { runHeartbeatCheck } from "../../agents/codeclaw-orchestrator/heartbeat-monitor.js";
 import { initCodeClawProject } from "../../agents/codeclaw-orchestrator/init.js";
 import { readOrchestratorState } from "../../agents/codeclaw-orchestrator/orchestrator-io.js";
+import {
+  createPersistentSessionsState,
+  deactivatePersistentSession,
+  readPersistentSessions,
+  registerPersistentSession,
+  writePersistentSessions,
+  type PersistentRole,
+} from "../../agents/codeclaw-orchestrator/persistent-sessions.js";
 import { getNextCodeClawStep, planCodeClawRun } from "../../agents/codeclaw-orchestrator/runner.js";
 import { ErrorCodes, errorShape } from "../protocol/index.js";
 import type { GatewayRequestHandlers } from "./types.js";
@@ -20,6 +28,12 @@ const VALID_TASK_STATUSES = new Set<CodeClawTaskStatus>([
   "in-review",
   "done",
   "blocked",
+]);
+const PERSISTENT_ROLE_SET = new Set<PersistentRole>([
+  "team-lead",
+  "project-manager",
+  "business-analyst",
+  "security",
 ]);
 
 function resolveProjectName(repoRoot: string, projectName?: string): string {
@@ -151,10 +165,73 @@ export const codeclawHandlers: GatewayRequestHandlers = {
       true,
       {
         step: execution.step,
+        action: execution.action,
         spawnParams: execution.spawnParams,
+        sendParams: execution.sendParams,
       },
       undefined,
     );
+  },
+  "codeclaw.sessions": async ({ params, respond }) => {
+    const repoRoot = typeof params.repoRoot === "string" ? params.repoRoot.trim() : "";
+    const action = typeof params.action === "string" ? params.action.trim() : "get";
+    const projectName =
+      typeof params.projectName === "string"
+        ? params.projectName.trim()
+        : resolveProjectName(repoRoot);
+    if (!repoRoot) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "repoRoot required"));
+      return;
+    }
+
+    const state =
+      (await readPersistentSessions(repoRoot)) ??
+      createPersistentSessionsState(projectName, repoRoot);
+
+    if (action === "register") {
+      const role = typeof params.role === "string" ? params.role.trim() : "";
+      const agentId = typeof params.agentId === "string" ? params.agentId.trim() : "";
+      const label = typeof params.label === "string" ? params.label.trim() : "";
+      const sessionKey = typeof params.sessionKey === "string" ? params.sessionKey.trim() : "";
+      if (!PERSISTENT_ROLE_SET.has(role as PersistentRole)) {
+        respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "invalid persistent role"));
+        return;
+      }
+      if (!agentId || !label) {
+        respond(
+          false,
+          undefined,
+          errorShape(ErrorCodes.INVALID_REQUEST, "agentId and label required"),
+        );
+        return;
+      }
+      const now = new Date().toISOString();
+      registerPersistentSession(state, role as PersistentRole, {
+        sessionKey: sessionKey || undefined,
+        label,
+        agentId,
+        spawnedAt: now,
+        lastActiveAt: now,
+        active: true,
+      });
+      await writePersistentSessions(repoRoot, state);
+      respond(true, state, undefined);
+      return;
+    }
+
+    if (action === "deactivate") {
+      const role = typeof params.role === "string" ? params.role.trim() : "";
+      if (!PERSISTENT_ROLE_SET.has(role as PersistentRole)) {
+        respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "invalid persistent role"));
+        return;
+      }
+      deactivatePersistentSession(state, role as PersistentRole);
+      await writePersistentSessions(repoRoot, state);
+      respond(true, state, undefined);
+      return;
+    }
+
+    respond(true, state, undefined);
   },
   "codeclaw.complete": async ({ params, respond }) => {
     const repoRoot = typeof params.repoRoot === "string" ? params.repoRoot.trim() : "";

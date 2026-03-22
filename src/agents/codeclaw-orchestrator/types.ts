@@ -4,6 +4,8 @@ export type OrchestratorPhase =
   | "development"
   | "testing"
   | "review"
+  | "security"
+  | "tracking"
   | "rework"
   | "done";
 

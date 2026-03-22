@@ -15,6 +15,7 @@ const ROLE_ORDER: CodeClawRole[] = [
   "team-lead",
   "project-manager",
   "business-analyst",
+  "security",
   "developer",
   "tester",
   "reviewer",

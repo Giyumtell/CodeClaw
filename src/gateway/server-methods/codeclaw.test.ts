@@ -72,7 +72,7 @@ describe("codeclaw gateway handlers", () => {
     expect(call[1]?.projectName).toBe("Gateway Project");
   });
 
-  it("codeclaw.plan creates a 6-step plan", async () => {
+  it("codeclaw.plan creates a 7-step plan", async () => {
     const repoRoot = await makeTempDir("codeclaw-repo");
     await invoke("codeclaw.init", { repoRoot, projectName: "Gateway Project" });
 
@@ -84,7 +84,7 @@ describe("codeclaw gateway handlers", () => {
 
     const call = respond.mock.calls[0] as [boolean, Array<unknown> | undefined];
     expect(call[0]).toBe(true);
-    expect(call[1]).toHaveLength(6);
+    expect(call[1]).toHaveLength(7);
   });
 
   it("codeclaw.next returns next step", async () => {
@@ -142,12 +142,49 @@ describe("codeclaw gateway handlers", () => {
 
     const call = respond.mock.calls[0] as [
       boolean,
-      { done?: boolean; step?: { taskId: number }; spawnParams?: { agentId: string } } | undefined,
+      {
+        done?: boolean;
+        step?: { taskId: number };
+        action?: "spawn" | "send";
+        spawnParams?: { agentId: string };
+      } | undefined,
     ];
     expect(call[0]).toBe(true);
     expect(call[1]?.done).not.toBe(true);
     expect(call[1]?.step?.taskId).toBeTypeOf("number");
+    expect(call[1]?.action).toBeTypeOf("string");
     expect(call[1]?.spawnParams?.agentId).toBeTypeOf("string");
+  });
+
+  it("codeclaw.sessions registers and deactivates persistent sessions", async () => {
+    const repoRoot = await makeTempDir("codeclaw-repo");
+
+    const registerRespond = await invoke("codeclaw.sessions", {
+      repoRoot,
+      action: "register",
+      role: "security",
+      sessionKey: "codeclaw-security",
+      agentId: "codeclaw-security",
+      label: "codeclaw-security-task-4",
+    });
+    const registerCall = registerRespond.mock.calls[0] as [
+      boolean,
+      { sessions?: Record<string, { active: boolean } | null> } | undefined,
+    ];
+    expect(registerCall[0]).toBe(true);
+    expect(registerCall[1]?.sessions?.security?.active).toBe(true);
+
+    const deactivateRespond = await invoke("codeclaw.sessions", {
+      repoRoot,
+      action: "deactivate",
+      role: "security",
+    });
+    const deactivateCall = deactivateRespond.mock.calls[0] as [
+      boolean,
+      { sessions?: Record<string, { active: boolean } | null> } | undefined,
+    ];
+    expect(deactivateCall[0]).toBe(true);
+    expect(deactivateCall[1]?.sessions?.security?.active).toBe(false);
   });
 
   it("codeclaw.progress returns heartbeat check result", async () => {
@@ -169,7 +206,7 @@ describe("codeclaw gateway handlers", () => {
 
     expect(call[0]).toBe(true);
     expect(call[1]?.healthy).toBe(true);
-    expect(call[1]?.report?.totalTasks).toBe(6);
+    expect(call[1]?.report?.totalTasks).toBe(7);
   });
 
   it("codeclaw.complete marks task done", async () => {

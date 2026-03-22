@@ -2,6 +2,7 @@ export type CodeClawRole =
   | "team-lead"
   | "project-manager"
   | "business-analyst"
+  | "security"
   | "developer"
   | "tester"
   | "reviewer";
@@ -89,6 +90,31 @@ export const CODECLAW_ROLES: Record<CodeClawRole, CodeClawRoleDefinition> = {
     ],
     outputExpectation:
       "Produce requirements documentation with explicit acceptance criteria and validation notes.",
+  },
+  security: {
+    role: "security",
+    displayName: "Security Engineer",
+    description:
+      "Scans commits for security vulnerabilities, reports to BA for ticket creation.",
+    reportsTo: "business-analyst",
+    manages: [],
+    contextStrategy: "scoped",
+    allowedActions: [
+      "Read any file",
+      "Read git diffs and commit history",
+      "Run security scanning tools",
+      "Create security finding reports",
+      "Flag vulnerabilities with severity labels",
+      "Notify BA of new security issues",
+    ],
+    forbiddenActions: [
+      "Write implementation code",
+      "Modify source files directly",
+      "Make architecture decisions",
+      "Merge or approve code",
+    ],
+    outputExpectation:
+      "Produce security scan reports with findings, severity (critical/high/medium/low), affected files, and remediation guidance.",
   },
   developer: {
     role: "developer",

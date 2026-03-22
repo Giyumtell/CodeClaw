@@ -10,6 +10,7 @@ const ROLES = [
   "team-lead",
   "project-manager",
   "business-analyst",
+  "security",
   "developer",
   "tester",
   "reviewer",
@@ -40,11 +41,11 @@ describe("codeclaw agents", () => {
     }
   });
 
-  it("getDefaultCodeClawAgentConfigs returns 6 configs", async () => {
+  it("getDefaultCodeClawAgentConfigs returns 7 configs", async () => {
     const baseDir = await makeTempDir();
     const configs = getDefaultCodeClawAgentConfigs(baseDir);
 
-    expect(configs).toHaveLength(6);
+    expect(configs).toHaveLength(7);
     expect(configs.map((config) => config.role).toSorted()).toEqual([...ROLES].toSorted());
   });
 
@@ -67,6 +68,7 @@ describe("codeclaw agents", () => {
     expect(generateRoleSoul("team-lead")).toContain("User -> Team Lead");
     expect(generateRoleSoul("project-manager")).toContain("report to the Team Lead");
     expect(generateRoleSoul("business-analyst")).toContain("report to the PM");
+    expect(generateRoleSoul("security")).toContain("report to the Business Analyst");
     expect(generateRoleSoul("developer")).toContain("report to the PM");
     expect(generateRoleSoul("tester")).toContain("report to the PM");
     expect(generateRoleSoul("reviewer")).toContain("report directly to the Team Lead");

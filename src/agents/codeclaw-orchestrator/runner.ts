@@ -6,6 +6,7 @@ import type { CodeClawRole } from "../codeclaw-roles/types.js";
 import { resolveCodeClawSpawn } from "../codeclaw-spawn/resolve.js";
 import { readOrchestratorState } from "./orchestrator-io.js";
 import { initOrchestrator, advancePhase } from "./orchestrator.js";
+import { buildSecurityScanDirective } from "./security-scan.js";
 
 export interface CodeClawRunStep {
   phase: string;
@@ -47,6 +48,11 @@ const LIFECYCLE_TASKS: PhaseTaskDefinition[] = [
     phase: "review",
     role: "reviewer",
     title: "Code review",
+  },
+  {
+    phase: "security",
+    role: "security",
+    title: "Scan commit diff and flag security risks",
   },
   {
     phase: "tracking",
@@ -95,6 +101,14 @@ function pickTaskForPhase(params: {
 
   if (params.phase === "review") {
     return sortedTasks.find((task) => task.assignedRole === "reviewer") ?? null;
+  }
+
+  if (params.phase === "security") {
+    return sortedTasks.find((task) => task.assignedRole === "security") ?? null;
+  }
+
+  if (params.phase === "tracking") {
+    return sortedTasks.find((task) => task.assignedRole === "project-manager") ?? null;
   }
 
   if (params.phase === "rework") {
@@ -156,7 +170,15 @@ export async function planCodeClawRun(params: {
       agentId: spawn.agentId,
       taskId: task.id,
       taskTitle: task.title,
-      directive: spawn.taskDirective,
+      directive:
+        taskDef.role === "security"
+          ? buildSecurityScanDirective({
+              repoRoot: params.repoRoot,
+              commitHash: "HEAD",
+              diffSummary: `Scan recent changes related to task #${task.id}: ${task.title}`,
+              changedFiles: [],
+            })
+          : spawn.taskDirective,
     });
   }
 
@@ -208,6 +230,14 @@ export async function getNextCodeClawStep(params: {
     agentId: spawn.agentId,
     taskId: task.id,
     taskTitle: task.title,
-    directive: spawn.taskDirective,
+    directive:
+      task.assignedRole === "security"
+        ? buildSecurityScanDirective({
+            repoRoot: params.repoRoot,
+            commitHash: "HEAD",
+            diffSummary: `Scan recent changes related to task #${task.id}: ${task.title}`,
+            changedFiles: [],
+          })
+        : spawn.taskDirective,
   };
 }

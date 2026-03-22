@@ -53,7 +53,7 @@ describe("codeclaw orchestrator progress", () => {
     expect(report?.agents).toHaveLength(1);
     expect(report?.agents[0]?.label).toBe("codeclaw-business-analyst-task-1");
     expect(report?.completedTasks).toBe(0);
-    expect(report?.totalTasks).toBe(6);
+    expect(report?.totalTasks).toBe(7);
   });
 
   it("handleStalledAgents marks stalled tasks as blocked", async () => {
