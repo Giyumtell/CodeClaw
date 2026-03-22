@@ -1,5 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { formatBoardMarkdown } from "../agents/codeclaw-board/board-format.js";
+import { readBoard } from "../agents/codeclaw-board/board-io.js";
+import { initCodeClawProject } from "../agents/codeclaw-orchestrator/init.js";
+import { getNextCodeClawStep, planCodeClawRun } from "../agents/codeclaw-orchestrator/runner.js";
 import { resolveStateDir } from "../config/paths.js";
 import type { RuntimeEnv } from "../runtime.js";
 
@@ -81,7 +85,9 @@ export async function assignCodeClawTask(params: {
 }): Promise<{ project: CodeClawProjectRecord; task: CodeClawProjectTask }> {
   const state = await loadCodeClawState(params.stateFile);
   const now = nowIso();
-  let project = state.projects.find((entry) => path.resolve(entry.repoRoot) === path.resolve(params.repoRoot));
+  let project = state.projects.find(
+    (entry) => path.resolve(entry.repoRoot) === path.resolve(params.repoRoot),
+  );
   if (!project) {
     project = {
       id: slugify(path.basename(params.repoRoot)) || "project",
@@ -99,7 +105,9 @@ export async function assignCodeClawTask(params: {
     id: `task-${nextIndex}`,
     title: params.title?.trim() || undefined,
     objective: params.objective.trim(),
-    acceptanceCriteria: (params.acceptanceCriteria ?? []).map((value) => value.trim()).filter(Boolean),
+    acceptanceCriteria: (params.acceptanceCriteria ?? [])
+      .map((value) => value.trim())
+      .filter(Boolean),
     constraints: (params.constraints ?? []).map((value) => value.trim()).filter(Boolean),
     status: "active",
     createdAt: now,
@@ -120,7 +128,9 @@ export async function assignCodeClawTask(params: {
 export async function getCodeClawStatus(params?: { repoRoot?: string; stateFile?: string }) {
   const state = await loadCodeClawState(params?.stateFile);
   const projects = params?.repoRoot
-    ? state.projects.filter((entry) => path.resolve(entry.repoRoot) === path.resolve(params.repoRoot!))
+    ? state.projects.filter(
+        (entry) => path.resolve(entry.repoRoot) === path.resolve(params.repoRoot!),
+      )
     : state.projects;
   return {
     version: state.version,
@@ -206,4 +216,140 @@ export async function codeClawStatusCommand(
       runtime.log(`  objective: ${activeTask.objective}`);
     }
   }
+}
+
+export async function codeClawInitCommand(
+  opts: {
+    repoRoot?: string;
+    projectName?: string;
+    agentBaseDir?: string;
+    json?: boolean;
+  },
+  runtime: RuntimeEnv,
+): Promise<void> {
+  const repoRoot = path.resolve(opts.repoRoot?.trim() || process.cwd());
+  const projectName = opts.projectName?.trim() || path.basename(repoRoot);
+
+  const artifacts = await initCodeClawProject({
+    repoRoot,
+    projectName,
+    agentBaseDir: opts.agentBaseDir,
+  });
+
+  if (opts.json) {
+    runtime.log(
+      JSON.stringify(
+        {
+          repoRoot,
+          projectName,
+          ...artifacts,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  runtime.log(`Initialized CodeClaw project in ${repoRoot}`);
+  runtime.log(`Board: ${artifacts.boardPath}`);
+  runtime.log(`Orchestrator state: ${artifacts.orchestratorPath}`);
+  runtime.log("Agent directories:");
+  for (const agentDir of artifacts.agentDirs) {
+    runtime.log(`- ${agentDir}`);
+  }
+}
+
+export async function codeClawRunCommand(
+  opts: {
+    repoRoot?: string;
+    userGoal?: string;
+    projectName?: string;
+    agentBaseDir?: string;
+    json?: boolean;
+  },
+  runtime: RuntimeEnv,
+): Promise<void> {
+  const repoRoot = path.resolve(opts.repoRoot?.trim() || process.cwd());
+  const userGoal = opts.userGoal?.trim();
+  const projectName = opts.projectName?.trim() || path.basename(repoRoot);
+
+  if (!userGoal) {
+    throw new Error("userGoal required");
+  }
+
+  const steps = await planCodeClawRun({
+    repoRoot,
+    projectName,
+    userGoal,
+    agentBaseDir: opts.agentBaseDir,
+  });
+
+  if (opts.json) {
+    runtime.log(JSON.stringify({ repoRoot, projectName, userGoal, steps }, null, 2));
+    return;
+  }
+
+  runtime.log(`CodeClaw run plan for ${projectName}:`);
+  for (const step of steps) {
+    runtime.log(
+      `- [${step.phase}] ${step.role} -> #${step.taskId} ${step.taskTitle} (${step.agentId})`,
+    );
+  }
+}
+
+export async function codeClawNextCommand(
+  opts: {
+    repoRoot?: string;
+    agentBaseDir?: string;
+    json?: boolean;
+  },
+  runtime: RuntimeEnv,
+): Promise<void> {
+  const repoRoot = path.resolve(opts.repoRoot?.trim() || process.cwd());
+  const step = await getNextCodeClawStep({
+    repoRoot,
+    agentBaseDir: opts.agentBaseDir,
+  });
+
+  if (opts.json) {
+    runtime.log(JSON.stringify(step, null, 2));
+    return;
+  }
+
+  if (!step) {
+    runtime.log("All tasks complete");
+    return;
+  }
+
+  runtime.log(
+    `Next step: [${step.phase}] ${step.role} -> #${step.taskId} ${step.taskTitle} (${step.agentId})`,
+  );
+}
+
+export async function codeClawBoardCommand(
+  opts: {
+    repoRoot?: string;
+    json?: boolean;
+  },
+  runtime: RuntimeEnv,
+): Promise<void> {
+  const repoRoot = path.resolve(opts.repoRoot?.trim() || process.cwd());
+  const board = await readBoard(repoRoot);
+
+  if (!board) {
+    if (opts.json) {
+      runtime.log(JSON.stringify(null, null, 2));
+      return;
+    }
+    runtime.log("Board not initialized");
+    return;
+  }
+
+  if (opts.json) {
+    runtime.log(JSON.stringify(board, null, 2));
+    return;
+  }
+
+  runtime.log(formatBoardMarkdown(board).trimEnd());
 }

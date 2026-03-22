@@ -5,6 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   assignCodeClawTask,
   codeClawAssignCommand,
+  codeClawBoardCommand,
+  codeClawInitCommand,
+  codeClawNextCommand,
+  codeClawRunCommand,
   codeClawStatusCommand,
   getCodeClawStatus,
 } from "./codeclaw.js";
@@ -18,7 +22,9 @@ async function makeStateFile(): Promise<string> {
 }
 
 afterEach(async () => {
-  await Promise.all(tempRoots.splice(0).map((target) => fs.rm(target, { recursive: true, force: true })));
+  await Promise.all(
+    tempRoots.splice(0).map((target) => fs.rm(target, { recursive: true, force: true })),
+  );
 });
 
 describe("assignCodeClawTask", () => {
@@ -93,5 +99,79 @@ describe("CodeClaw commands", () => {
     expect(runtime.log).toHaveBeenCalledWith("demo — /repo/demo");
     expect(runtime.log).toHaveBeenCalledWith("  tasks: 1");
     expect(runtime.log).toHaveBeenCalledWith("  active: task-1");
+  });
+
+  it("codeClawInitCommand creates .codeclaw directory and board files", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-repo-"));
+    const agentBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-agents-"));
+    tempRoots.push(repoRoot, agentBaseDir);
+    const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };
+
+    await codeClawInitCommand({ repoRoot, agentBaseDir }, runtime);
+
+    await fs.access(path.join(repoRoot, ".codeclaw"));
+    await fs.access(path.join(repoRoot, ".codeclaw", "board.md"));
+    await fs.access(path.join(repoRoot, ".codeclaw", "board-state.json"));
+  });
+
+  it("codeClawRunCommand prints run plan with 6 steps", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-repo-"));
+    const agentBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-agents-"));
+    tempRoots.push(repoRoot, agentBaseDir);
+    const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };
+
+    await codeClawRunCommand(
+      {
+        repoRoot,
+        userGoal: "Build CodeClaw orchestration",
+        projectName: "CodeClaw",
+        agentBaseDir,
+      },
+      runtime,
+    );
+
+    const loggedLines = runtime.log.mock.calls
+      .map((call) => String(call[0]))
+      .filter((line) => line.startsWith("- ["));
+    expect(loggedLines).toHaveLength(6);
+  });
+
+  it("codeClawBoardCommand shows empty board after init", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-repo-"));
+    const agentBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-agents-"));
+    tempRoots.push(repoRoot, agentBaseDir);
+    const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };
+
+    await codeClawInitCommand({ repoRoot, agentBaseDir }, runtime);
+    runtime.log.mockClear();
+    await codeClawBoardCommand({ repoRoot }, runtime);
+
+    const boardOutput = runtime.log.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(boardOutput).toContain("# CodeClaw Board");
+    expect(boardOutput).toContain("- (none)");
+  });
+
+  it("codeClawNextCommand returns next step", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-repo-"));
+    const agentBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-agents-"));
+    tempRoots.push(repoRoot, agentBaseDir);
+    const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };
+
+    await codeClawRunCommand(
+      {
+        repoRoot,
+        userGoal: "Build CodeClaw orchestration",
+        projectName: "CodeClaw",
+        agentBaseDir,
+      },
+      runtime,
+    );
+    runtime.log.mockClear();
+
+    await codeClawNextCommand({ repoRoot, agentBaseDir }, runtime);
+
+    const output = runtime.log.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(output).toContain("Next step:");
+    expect(output).toContain("business-analyst");
   });
 });
