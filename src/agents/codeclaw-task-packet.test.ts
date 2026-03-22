@@ -21,7 +21,9 @@ async function makeRepoWithContext(contextText?: string): Promise<string> {
 }
 
 afterEach(async () => {
-  await Promise.all(tempRoots.splice(0).map((target) => rm(target, { recursive: true, force: true })));
+  await Promise.all(
+    tempRoots.splice(0).map((target) => rm(target, { recursive: true, force: true })),
+  );
 });
 
 describe("buildCodeClawTaskPacket", () => {
@@ -39,7 +41,9 @@ describe("buildCodeClawTaskPacket", () => {
   });
 
   it("includes AlphaIota excerpt and matched paths when available", async () => {
-    const repoRoot = await makeRepoWithContext(`# DemoRepo — DemoRepo\n\nsrc/\n  agents/\n    src/agents/codeclaw-task-packet.ts — codeclaw-task-packet.ts\n      buildCodeClawTaskPacket(params)\n  context-engine/\n    src/context-engine/legacy.ts — legacy.ts\n      LegacyContextEngine [class] — LegacyContextEngine\n`);
+    const repoRoot = await makeRepoWithContext(
+      `# DemoRepo — DemoRepo\n\nsrc/\n  agents/\n    src/agents/codeclaw-task-packet.ts — codeclaw-task-packet.ts\n      buildCodeClawTaskPacket(params)\n  context-engine/\n    src/context-engine/legacy.ts — legacy.ts\n      LegacyContextEngine [class] — LegacyContextEngine\n`,
+    );
 
     const packet = await buildCodeClawTaskPacket({
       objective: "improve codeclaw task packet builder",
@@ -56,7 +60,9 @@ describe("buildCodeClawTaskPacket", () => {
   });
 
   it("formats a readable task packet", async () => {
-    const repoRoot = await makeRepoWithContext(`# DemoRepo — DemoRepo\n\nsrc/\n  context-engine/\n    src/context-engine/legacy.ts — legacy.ts\n      LegacyContextEngine [class] — LegacyContextEngine\n`);
+    const repoRoot = await makeRepoWithContext(
+      `# DemoRepo — DemoRepo\n\nsrc/\n  context-engine/\n    src/context-engine/legacy.ts — legacy.ts\n      LegacyContextEngine [class] — LegacyContextEngine\n`,
+    );
 
     const packet = await buildCodeClawTaskPacket({
       objective: "update legacy context behavior",
@@ -71,5 +77,54 @@ describe("buildCodeClawTaskPacket", () => {
     expect(text).toContain("## Objective");
     expect(text).toContain("## Acceptance Criteria");
     expect(text).toContain("## Repo Context");
+  });
+
+  it("includes role prompt and scoped strategy for developer role", async () => {
+    const repoRoot = await makeRepoWithContext(
+      `# DemoRepo — DemoRepo\n\nsrc/\n  agents/\n    src/agents/codeclaw-task-packet.ts — codeclaw-task-packet.ts\n`,
+    );
+
+    const packet = await buildCodeClawTaskPacket({
+      objective: "update codeclaw task packet role behavior",
+      repoRoot,
+      role: "developer",
+    });
+
+    expect(packet.role).toBe("developer");
+    expect(packet.contextStrategy).toBe("scoped");
+    expect(packet.rolePrompt).toBeTruthy();
+  });
+
+  it("uses full context strategy for team-lead role", async () => {
+    const repoRoot = await makeRepoWithContext(
+      `# DemoRepo — DemoRepo\n\nsrc/\n  context-engine/\n    src/context-engine/alphai-context-slice.ts — alphai-context-slice.ts\n`,
+    );
+
+    const packet = await buildCodeClawTaskPacket({
+      objective: "decompose context strategy work",
+      repoRoot,
+      role: "team-lead",
+    });
+
+    expect(packet.role).toBe("team-lead");
+    expect(packet.contextStrategy).toBe("full");
+    expect(packet.alphaIota.available).toBe(true);
+  });
+
+  it("formats role details in a dedicated section", async () => {
+    const repoRoot = await makeRepoWithContext(
+      `# DemoRepo — DemoRepo\n\nsrc/\n  agents/\n    src/agents/codeclaw-task-packet.ts — codeclaw-task-packet.ts\n`,
+    );
+
+    const packet = await buildCodeClawTaskPacket({
+      objective: "format role section",
+      repoRoot,
+      role: "developer",
+    });
+
+    const text = formatCodeClawTaskPacket(packet);
+    expect(text).toContain("## Role");
+    expect(text).toContain("Role: developer");
+    expect(text).toContain("Context Strategy: scoped");
   });
 });

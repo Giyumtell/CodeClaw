@@ -1,6 +1,15 @@
 import path from "node:path";
 import { discoverAlphaIotaArtifacts } from "../context-engine/alphai-artifacts.js";
-import { selectAlphaIotaContextSlice } from "../context-engine/alphai-context-slice.js";
+import {
+  selectAlphaIotaContextSlice,
+  selectAlphaIotaContextByStrategy,
+} from "../context-engine/alphai-context-slice.js";
+import {
+  buildRolePrompt,
+  CODECLAW_ROLES,
+  type CodeClawContextStrategy,
+  type CodeClawRole,
+} from "./codeclaw-roles/index.js";
 
 export type CodeClawTaskPacket = {
   title?: string;
@@ -8,6 +17,9 @@ export type CodeClawTaskPacket = {
   repoRoot: string;
   repoName: string;
   workspaceName?: string;
+  role?: CodeClawRole;
+  rolePrompt?: string;
+  contextStrategy?: CodeClawContextStrategy;
   acceptanceCriteria: string[];
   constraints: string[];
   alphaIota:
@@ -27,6 +39,7 @@ export async function buildCodeClawTaskPacket(params: {
   repoRoot: string;
   title?: string;
   workspaceName?: string;
+  role?: CodeClawRole;
   acceptanceCriteria?: string[];
   constraints?: string[];
   maxContextChars?: number;
@@ -34,8 +47,20 @@ export async function buildCodeClawTaskPacket(params: {
   const objective = params.objective.trim();
   const repoRoot = params.repoRoot;
   const repoName = path.basename(repoRoot);
-  const acceptanceCriteria = (params.acceptanceCriteria ?? []).map((value) => value.trim()).filter(Boolean);
+  const acceptanceCriteria = (params.acceptanceCriteria ?? [])
+    .map((value) => value.trim())
+    .filter(Boolean);
   const constraints = (params.constraints ?? []).map((value) => value.trim()).filter(Boolean);
+  const role = params.role;
+  const roleDefinition = role ? CODECLAW_ROLES[role] : undefined;
+  const rolePrompt = role
+    ? buildRolePrompt(role, {
+        objective,
+        acceptanceCriteria,
+        constraints,
+      })
+    : undefined;
+  const contextStrategy = roleDefinition?.contextStrategy;
 
   const artifacts = await discoverAlphaIotaArtifacts(repoRoot);
   if (!artifacts) {
@@ -45,6 +70,9 @@ export async function buildCodeClawTaskPacket(params: {
       repoRoot,
       repoName,
       workspaceName: params.workspaceName?.trim() || undefined,
+      role,
+      rolePrompt,
+      contextStrategy,
       acceptanceCriteria,
       constraints,
       alphaIota: {
@@ -53,11 +81,19 @@ export async function buildCodeClawTaskPacket(params: {
     };
   }
 
-  const slice = await selectAlphaIotaContextSlice({
-    repoRoot,
-    prompt: objective,
-    maxChars: params.maxContextChars,
-  });
+  const slice =
+    contextStrategy && role
+      ? await selectAlphaIotaContextByStrategy({
+          repoRoot,
+          prompt: objective,
+          strategy: contextStrategy,
+          maxChars: params.maxContextChars,
+        })
+      : await selectAlphaIotaContextSlice({
+          repoRoot,
+          prompt: objective,
+          maxChars: params.maxContextChars,
+        });
 
   return {
     title: params.title?.trim() || undefined,
@@ -65,6 +101,9 @@ export async function buildCodeClawTaskPacket(params: {
     repoRoot,
     repoName,
     workspaceName: params.workspaceName?.trim() || undefined,
+    role,
+    rolePrompt,
+    contextStrategy,
     acceptanceCriteria,
     constraints,
     alphaIota: slice
@@ -94,6 +133,17 @@ export function formatCodeClawTaskPacket(packet: CodeClawTaskPacket): string {
   lines.push("");
   lines.push("## Objective");
   lines.push(packet.objective);
+
+  if (packet.rolePrompt) {
+    lines.push("");
+    lines.push("## Role");
+    lines.push(`Role: ${packet.role}`);
+    if (packet.contextStrategy) {
+      lines.push(`Context Strategy: ${packet.contextStrategy}`);
+    }
+    lines.push("");
+    lines.push(packet.rolePrompt);
+  }
 
   if (packet.acceptanceCriteria.length > 0) {
     lines.push("");
@@ -133,7 +183,9 @@ export function formatCodeClawTaskPacket(packet: CodeClawTaskPacket): string {
 
   lines.push("");
   lines.push("## Execution Notes");
-  lines.push("- Use AlphaIota context as a navigation aid, not as a substitute for reading source files before editing.");
+  lines.push(
+    "- Use AlphaIota context as a navigation aid, not as a substitute for reading source files before editing.",
+  );
   lines.push("- Verify the real code paths before making changes.");
   lines.push("- Prefer focused edits and report what changed and how it was verified.");
 

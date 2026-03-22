@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import type { CodeClawContextStrategy } from "../agents/codeclaw-roles/types.js";
 import { discoverAlphaIotaArtifacts } from "./alphai-artifacts.js";
 
 const STOP_WORDS = new Set([
@@ -87,11 +88,34 @@ function extractMatchedPath(line: string): string | undefined {
   return match?.[1]?.trim();
 }
 
-function mergeRanges(ranges: Array<{ start: number; end: number }>): Array<{ start: number; end: number }> {
+function buildSystemPromptAddition(params: {
+  repoName: string;
+  prompt: string;
+  matchedPaths: string[];
+  excerpt: string;
+}): string {
+  const matchedPathText =
+    params.matchedPaths.length > 0
+      ? params.matchedPaths.map((value) => `- ${value}`).join("\n")
+      : "- no strong path matches";
+  return [
+    `AlphaIota repo context is available for workspace ${params.repoName}.`,
+    `Use this as an architecture/navigation hint, not as a substitute for reading the real source before edits.`,
+    `Prompt focus: ${params.prompt}`,
+    "Likely relevant paths:",
+    matchedPathText,
+    "Relevant AlphaIota context excerpt:",
+    params.excerpt,
+  ].join("\n\n");
+}
+
+function mergeRanges(
+  ranges: Array<{ start: number; end: number }>,
+): Array<{ start: number; end: number }> {
   if (ranges.length === 0) {
     return [];
   }
-  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+  const sorted = [...ranges].toSorted((a, b) => a.start - b.start);
   const merged: Array<{ start: number; end: number }> = [sorted[0]];
   for (const range of sorted.slice(1)) {
     const last = merged[merged.length - 1];
@@ -130,7 +154,10 @@ function buildExcerpt(params: {
     sections.push(overview.join("\n"));
   }
   for (const range of ranges.slice(0, 12)) {
-    const block = lines.slice(range.start, range.end + 1).join("\n").trim();
+    const block = lines
+      .slice(range.start, range.end + 1)
+      .join("\n")
+      .trim();
     if (block) {
       sections.push(block);
     }
@@ -165,9 +192,11 @@ export async function selectAlphaIotaContextSlice(params: {
   const scored = lines
     .map((line, index) => ({ index, score: scoreLine(line, keywords), line }))
     .filter((entry) => entry.score > 0)
-    .sort((a, b) => b.score - a.score || a.index - b.index);
+    .toSorted((a, b) => b.score - a.score || a.index - b.index);
 
-  const keywordHits = unique(scored.slice(0, 24).map((entry) => entry.index)).sort((a, b) => a - b);
+  const keywordHits = unique(scored.slice(0, 24).map((entry) => entry.index)).toSorted(
+    (a, b) => a - b,
+  );
   const { excerpt, matchedPaths } = buildExcerpt({
     lines,
     keywordHits,
@@ -179,17 +208,12 @@ export async function selectAlphaIotaContextSlice(params: {
   }
 
   const repoName = path.basename(artifacts.repoRoot);
-  const matchedPathText =
-    matchedPaths.length > 0 ? matchedPaths.map((value) => `- ${value}`).join("\n") : "- no strong path matches";
-  const systemPromptAddition = [
-    `AlphaIota repo context is available for workspace ${repoName}.`,
-    `Use this as an architecture/navigation hint, not as a substitute for reading the real source before edits.`,
-    `Prompt focus: ${prompt}`,
-    "Likely relevant paths:",
-    matchedPathText,
-    "Relevant AlphaIota context excerpt:",
+  const systemPromptAddition = buildSystemPromptAddition({
+    repoName,
+    prompt,
+    matchedPaths,
     excerpt,
-  ].join("\n\n");
+  });
 
   return {
     repoRoot: artifacts.repoRoot,
@@ -198,5 +222,63 @@ export async function selectAlphaIotaContextSlice(params: {
     matchedPaths,
     excerpt,
     systemPromptAddition,
+  };
+}
+
+export async function selectAlphaIotaContextByStrategy(params: {
+  repoRoot: string;
+  prompt: string;
+  strategy: CodeClawContextStrategy;
+  maxChars?: number;
+}): Promise<AlphaIotaContextSlice | null> {
+  if (params.strategy === "state-only") {
+    return null;
+  }
+
+  if (params.strategy === "scoped") {
+    return selectAlphaIotaContextSlice({
+      repoRoot: params.repoRoot,
+      prompt: params.prompt,
+      maxChars: params.maxChars,
+    });
+  }
+
+  const artifacts = await discoverAlphaIotaArtifacts(params.repoRoot);
+  if (!artifacts) {
+    return null;
+  }
+
+  const prompt = params.prompt.trim();
+  const text = await readFile(artifacts.contextFile, "utf8");
+  const lines = text.split(/\r?\n/);
+  const lineLimit = params.strategy === "summary" ? 80 : lines.length;
+  const selectedText = lines.slice(0, Math.min(lines.length, lineLimit)).join("\n").trim();
+
+  if (!selectedText) {
+    return null;
+  }
+
+  const maxChars = params.maxChars ?? 8000;
+  const excerpt =
+    selectedText.length > maxChars
+      ? `${selectedText.slice(0, Math.max(0, maxChars - "\n\n[truncated...]".length)).trimEnd()}\n\n[truncated...]`
+      : selectedText;
+  const matchedPaths = unique(
+    lines.slice(0, Math.min(lines.length, lineLimit)).map(extractMatchedPath).filter(Boolean),
+  ).slice(0, 12) as string[];
+  const repoName = path.basename(artifacts.repoRoot);
+
+  return {
+    repoRoot: artifacts.repoRoot,
+    contextFile: artifacts.contextFile,
+    prompt,
+    matchedPaths,
+    excerpt,
+    systemPromptAddition: buildSystemPromptAddition({
+      repoName,
+      prompt,
+      matchedPaths,
+      excerpt,
+    }),
   };
 }
