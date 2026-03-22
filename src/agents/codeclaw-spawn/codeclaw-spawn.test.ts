@@ -1,4 +1,4 @@
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -105,5 +105,65 @@ describe("resolveCodeClawSpawn", () => {
 
     expect(developer.contextStrategy).toBe("scoped");
     expect(teamLead.contextStrategy).toBe("full");
+  });
+
+  it("warns when AlphaIota context is unavailable for code-facing roles", async () => {
+    const repoRoot = await makeTempDir("codeclaw-spawn-repo");
+    const agentBaseDir = await makeTempDir("codeclaw-spawn-agents");
+
+    const result = await resolveCodeClawSpawn({
+      role: "developer",
+      repoRoot,
+      taskTitle: "Build feature",
+      taskId: 5,
+      objective: "Implement feature X",
+      acceptanceCriteria: ["Feature works"],
+      agentBaseDir,
+    });
+
+    expect(result.systemPromptAddition).toContain("AlphaIota context unavailable");
+    expect(result.systemPromptAddition).toContain("run `alphai`");
+  });
+
+  it("does NOT warn for state-only roles (PM) when AlphaIota is absent", async () => {
+    const repoRoot = await makeTempDir("codeclaw-spawn-repo");
+    const agentBaseDir = await makeTempDir("codeclaw-spawn-agents");
+
+    const result = await resolveCodeClawSpawn({
+      role: "project-manager",
+      repoRoot,
+      taskTitle: "Track progress",
+      taskId: 6,
+      objective: "Monitor sprint",
+      acceptanceCriteria: [],
+      agentBaseDir,
+    });
+
+    expect(result.systemPromptAddition).not.toContain("AlphaIota context unavailable");
+  });
+
+  it("injects AlphaIota context when .alphai/context.txt exists", async () => {
+    const repoRoot = await makeTempDir("codeclaw-spawn-repo");
+    const agentBaseDir = await makeTempDir("codeclaw-spawn-agents");
+
+    const alphaDir = path.join(repoRoot, ".alphai");
+    await mkdir(alphaDir, { recursive: true });
+    await writeFile(
+      path.join(alphaDir, "context.txt"),
+      "# Architecture\nsrc/main.ts — Entry point\nsrc/utils.ts — Shared utilities\n",
+    );
+
+    const result = await resolveCodeClawSpawn({
+      role: "developer",
+      repoRoot,
+      taskTitle: "Build feature",
+      taskId: 7,
+      objective: "Implement utilities",
+      acceptanceCriteria: ["Utils work"],
+      agentBaseDir,
+    });
+
+    expect(result.systemPromptAddition).toContain("AlphaIota repo context");
+    expect(result.systemPromptAddition).not.toContain("AlphaIota context unavailable");
   });
 });

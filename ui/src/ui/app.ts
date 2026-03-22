@@ -38,6 +38,7 @@ import {
 } from "./app-scroll.ts";
 import {
   applySettings as applySettingsInternal,
+  loadCodeClaw as loadCodeClawInternal,
   loadCron as loadCronInternal,
   loadOverview as loadOverviewInternal,
   setTab as setTabInternal,
@@ -70,6 +71,9 @@ import type {
   ConfigSnapshot,
   ConfigUiHints,
   ChatModelOverride,
+  CodeClawBoard,
+  CodeClawOrchestratorState,
+  CodeClawRunStep,
   CronJob,
   CronRunLogEntry,
   CronStatus,
@@ -381,6 +385,15 @@ export class OpenClawApp extends LitElement {
   @state() cronRunsSortDir: import("./types.js").CronSortDir = "desc";
   @state() cronModelSuggestions: string[] = [];
   @state() cronBusy = false;
+  @state() codeclawLoading = false;
+  @state() codeclawError: string | null = null;
+  @state() codeclawBoard: CodeClawBoard | null = null;
+  @state() codeclawOrchestratorState: CodeClawOrchestratorState | null = null;
+  @state() codeclawRunPlan: CodeClawRunStep[] | null = null;
+  @state() codeclawNextStep: CodeClawRunStep | null = null;
+  @state() codeclawRepoRoot = ".";
+  @state() codeclawProjectName = "";
+  @state() codeclawUserGoal = "";
 
   @state() updateAvailable: import("./types.js").UpdateAvailable | null = null;
 
@@ -582,6 +595,10 @@ export class OpenClawApp extends LitElement {
 
   async loadCron() {
     await loadCronInternal(this as unknown as Parameters<typeof loadCronInternal>[0]);
+  }
+
+  async loadCodeClaw() {
+    await loadCodeClawInternal(this as unknown as Parameters<typeof loadCodeClawInternal>[0]);
   }
 
   async handleAbortChat() {

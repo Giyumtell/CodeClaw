@@ -17,6 +17,7 @@ type Tab =
   | "sessions"
   | "usage"
   | "cron"
+  | "codeclaw"
   | "skills"
   | "nodes"
   | "chat"

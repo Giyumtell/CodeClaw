@@ -53,6 +53,15 @@ import {
   updateCronJobsFilter,
   updateCronRunsFilter,
 } from "./controllers/cron.ts";
+import {
+  advanceCodeClawTask,
+  getCodeClawNextStep,
+  initCodeClawProject,
+  loadCodeClawBoard,
+  loadCodeClawStatus,
+  planCodeClawRun,
+  type CodeClawState,
+} from "./controllers/codeclaw.ts";
 import { loadDebug, callDebugMethod } from "./controllers/debug.ts";
 import {
   approveDevicePairing,
@@ -124,6 +133,7 @@ function createLazy<T>(loader: () => Promise<T>): () => T | null {
 const lazyAgents = createLazy(() => import("./views/agents.ts"));
 const lazyChannels = createLazy(() => import("./views/channels.ts"));
 const lazyCron = createLazy(() => import("./views/cron.ts"));
+const lazyCodeClaw = createLazy(() => import("./views/codeclaw.ts"));
 const lazyDebug = createLazy(() => import("./views/debug.ts"));
 const lazyInstances = createLazy(() => import("./views/instances.ts"));
 const lazyLogs = createLazy(() => import("./views/logs.ts"));
@@ -379,6 +389,7 @@ export function renderApp(state: AppViewState) {
     state.cronForm.deliveryMode === "webhook"
       ? rawDeliveryToSuggestions.filter((value) => isHttpUrl(value))
       : rawDeliveryToSuggestions;
+  const codeclawState = state as unknown as CodeClawState;
 
   return html`
     ${renderCommandPalette({
@@ -873,6 +884,49 @@ export function renderApp(state: AppViewState) {
                   onNavigateToChat: (sessionKey) => {
                     switchChatSession(state, sessionKey);
                     state.setTab("chat" as import("./navigation.ts").Tab);
+                  },
+                }),
+              )
+            : nothing
+        }
+
+        ${
+          state.tab === "codeclaw"
+            ? lazyRender(lazyCodeClaw, (m) =>
+                m.renderCodeClaw({
+                  loading: state.codeclawLoading,
+                  error: state.codeclawError,
+                  board: state.codeclawBoard,
+                  orchestratorState: state.codeclawOrchestratorState,
+                  runPlan: state.codeclawRunPlan,
+                  nextStep: state.codeclawNextStep,
+                  repoRoot: state.codeclawRepoRoot,
+                  projectName: state.codeclawProjectName,
+                  userGoal: state.codeclawUserGoal,
+                  onRepoRootChange: (value) => {
+                    state.codeclawRepoRoot = value;
+                  },
+                  onProjectNameChange: (value) => {
+                    state.codeclawProjectName = value;
+                  },
+                  onUserGoalChange: (value) => {
+                    state.codeclawUserGoal = value;
+                  },
+                  onInitProject: async () => {
+                    await initCodeClawProject(codeclawState);
+                  },
+                  onPlanRun: async () => {
+                    await planCodeClawRun(codeclawState);
+                  },
+                  onRefresh: async () => {
+                    await loadCodeClawStatus(codeclawState);
+                    await loadCodeClawBoard(codeclawState);
+                  },
+                  onExecuteNextStep: async () => {
+                    await getCodeClawNextStep(codeclawState);
+                  },
+                  onAdvanceTask: async (taskId, status) => {
+                    await advanceCodeClawTask(codeclawState, taskId, status);
                   },
                 }),
               )

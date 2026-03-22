@@ -679,3 +679,57 @@ export type AttentionItem = {
   href?: string;
   external?: boolean;
 };
+
+// CodeClaw types
+export type CodeClawTaskStatus = "backlog" | "in-progress" | "in-review" | "done" | "blocked";
+export type CodeClawRole =
+  | "team-lead"
+  | "project-manager"
+  | "business-analyst"
+  | "developer"
+  | "tester"
+  | "reviewer";
+
+export type CodeClawBoardTask = {
+  id: number;
+  title: string;
+  status: CodeClawTaskStatus;
+  assignedRole?: CodeClawRole;
+  agentId?: string;
+  acceptanceCriteria: string[];
+  constraints: string[];
+  blockers: string[];
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CodeClawBoard = {
+  projectName: string;
+  repoRoot: string;
+  tasks: CodeClawBoardTask[];
+  nextTaskId: number;
+};
+
+export type CodeClawOrchestratorState = {
+  projectName: string;
+  repoRoot: string;
+  currentPhase: string;
+  userGoal: string;
+  phaseHistory: Array<{ phase: string; startedAt: string; completedAt?: string; notes?: string }>;
+};
+
+export type CodeClawRunStep = {
+  phase: string;
+  role: CodeClawRole;
+  agentId: string;
+  taskId: number;
+  taskTitle: string;
+  directive: string;
+};
+
+export type CodeClawStatusResult = {
+  orchestratorState: CodeClawOrchestratorState | null;
+  board: CodeClawBoard | null;
+  roleMemories: Record<string, unknown>;
+};

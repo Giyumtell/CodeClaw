@@ -140,3 +140,4 @@ changelog/fragments/
 #AlphaIota
 .alphai/github-token.json
 .alphai/config.yaml
+.alphai/

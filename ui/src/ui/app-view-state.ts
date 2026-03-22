@@ -22,6 +22,9 @@ import type {
   LogEntry,
   LogLevel,
   ChatModelOverride,
+  CodeClawBoard,
+  CodeClawOrchestratorState,
+  CodeClawRunStep,
   ModelCatalogEntry,
   NostrProfile,
   PresenceEntry,
@@ -227,6 +230,15 @@ export type AppViewState = {
   usageLogFilterTools: string[];
   usageLogFilterHasTools: boolean;
   usageLogFilterQuery: string;
+  codeclawLoading: boolean;
+  codeclawError: string | null;
+  codeclawBoard: CodeClawBoard | null;
+  codeclawOrchestratorState: CodeClawOrchestratorState | null;
+  codeclawRunPlan: CodeClawRunStep[] | null;
+  codeclawNextStep: CodeClawRunStep | null;
+  codeclawRepoRoot: string;
+  codeclawProjectName: string;
+  codeclawUserGoal: string;
 } & Pick<
   CronState,
   | "cronLoading"
@@ -316,6 +328,7 @@ export type AppViewState = {
     loadOverview: () => Promise<void>;
     loadAssistantIdentity: () => Promise<void>;
     loadCron: () => Promise<void>;
+    loadCodeClaw: () => Promise<void>;
     handleWhatsAppStart: (force: boolean) => Promise<void>;
     handleWhatsAppWait: () => Promise<void>;
     handleWhatsAppLogout: () => Promise<void>;

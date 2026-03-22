@@ -14,6 +14,7 @@ import { loadAgents } from "./controllers/agents.ts";
 import { loadChannels } from "./controllers/channels.ts";
 import { loadConfig, loadConfigSchema } from "./controllers/config.ts";
 import { loadCronJobs, loadCronRuns, loadCronStatus } from "./controllers/cron.ts";
+import { loadCodeClawBoard, loadCodeClawStatus } from "./controllers/codeclaw.ts";
 import { loadDebug } from "./controllers/debug.ts";
 import { loadDevices } from "./controllers/devices.ts";
 import { loadExecApprovals } from "./controllers/exec-approvals.ts";
@@ -55,6 +56,15 @@ type SettingsHost = {
   agentsList?: AgentsListResult | null;
   agentsSelectedId?: string | null;
   agentsPanel?: "overview" | "files" | "tools" | "skills" | "channels" | "cron";
+  codeclawLoading?: boolean;
+  codeclawError?: string | null;
+  codeclawBoard?: import("./types.js").CodeClawBoard | null;
+  codeclawOrchestratorState?: import("./types.js").CodeClawOrchestratorState | null;
+  codeclawRunPlan?: import("./types.js").CodeClawRunStep[] | null;
+  codeclawNextStep?: import("./types.js").CodeClawRunStep | null;
+  codeclawRepoRoot?: string;
+  codeclawProjectName?: string;
+  codeclawUserGoal?: string;
   pendingGatewayUrl?: string | null;
   systemThemeCleanup?: (() => void) | null;
   pendingGatewayToken?: string | null;
@@ -231,6 +241,9 @@ export async function refreshActiveTab(host: SettingsHost) {
   }
   if (host.tab === "cron") {
     await loadCron(host);
+  }
+  if (host.tab === "codeclaw") {
+    await loadCodeClaw(host);
   }
   if (host.tab === "skills") {
     await loadSkills(host as unknown as OpenClawApp);
@@ -651,4 +664,10 @@ export async function loadCron(host: SettingsHost) {
     loadCronJobs(app),
     loadCronRuns(app, activeCronJobId),
   ]);
+}
+
+export async function loadCodeClaw(host: SettingsHost) {
+  const app = host as unknown as OpenClawApp;
+  await loadCodeClawStatus(app);
+  await loadCodeClawBoard(app);
 }

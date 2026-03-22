@@ -1,5 +1,6 @@
 import os from "node:os";
 import path from "node:path";
+import { selectAlphaIotaContextByStrategy } from "../../context-engine/alphai-context-slice.js";
 import { getDefaultCodeClawAgentConfigs } from "../codeclaw-agents/types.js";
 import { formatBoardMarkdown } from "../codeclaw-board/board-format.js";
 import type { CodeClawBoard } from "../codeclaw-board/types.js";
@@ -81,10 +82,18 @@ function formatSystemPromptAddition(params: {
   rolePrompt: string;
   memoryMarkdown: string;
   boardSummary: string;
+  alphaIotaContext?: string;
+  alphaIotaWarning?: string;
 }): string {
-  return [
+  const sections = [
     "# Role Prompt",
     params.rolePrompt,
+    "",
+    "# AlphaIota Codebase Context",
+    params.alphaIotaContext
+      ? params.alphaIotaContext
+      : "No AlphaIota context available for this role/strategy.",
+    params.alphaIotaWarning ?? "",
     "",
     "# Memory Context",
     params.memoryMarkdown,
@@ -97,9 +106,18 @@ function formatSystemPromptAddition(params: {
     "",
     "Current Board Snapshot:",
     params.boardSummary,
-  ].join("\n");
+  ];
+  return sections.join("\n");
 }
 
+/**
+ * Resolve spawn configuration for a CodeClaw role agent.
+ *
+ * AlphaIota context is fetched **automatically** based on the role's context
+ * strategy — callers never need to supply it.  The only way to skip context
+ * is if the strategy is "state-only" or AlphaIota artifacts don't exist in
+ * the repo (which triggers a clear warning in the directive).
+ */
 export async function resolveCodeClawSpawn(params: {
   role: CodeClawRole;
   repoRoot: string;
@@ -109,7 +127,6 @@ export async function resolveCodeClawSpawn(params: {
   acceptanceCriteria: string[];
   constraints?: string[];
   agentBaseDir?: string;
-  contextSlice?: string;
   boardSummary?: string;
 }): Promise<CodeClawSpawnConfig> {
   const agentBaseDir = params.agentBaseDir ?? resolveDefaultAgentBaseDir();
@@ -129,6 +146,23 @@ export async function resolveCodeClawSpawn(params: {
     constraints,
   });
 
+  // --- Mandatory AlphaIota context fetch ---
+  // Every role agent gets context sliced by its strategy. "state-only" roles
+  // (e.g. PM) skip this intentionally — they operate on board/orchestrator
+  // state only, not source code.
+  const contextPrompt = `${params.objective} ${params.taskTitle} ${acceptanceCriteria.join(" ")}`;
+  const alphaIotaSlice = await selectAlphaIotaContextByStrategy({
+    repoRoot: params.repoRoot,
+    prompt: contextPrompt,
+    strategy: contextStrategy,
+  });
+
+  const contextSlice = alphaIotaSlice?.systemPromptAddition ?? undefined;
+  const alphaIotaWarning =
+    contextStrategy !== "state-only" && !alphaIotaSlice
+      ? "\n\n⚠️ WARNING: AlphaIota context unavailable — run `alphai` on this repo first. Operating without codebase intelligence."
+      : "";
+
   const memoryState = await readRoleMemory(config.agentDir, params.role);
   const memoryMarkdown = memoryState
     ? formatRoleMemoryMarkdown(memoryState).trimEnd()
@@ -147,6 +181,8 @@ export async function resolveCodeClawSpawn(params: {
       rolePrompt,
       memoryMarkdown,
       boardSummary,
+      alphaIotaContext: contextSlice,
+      alphaIotaWarning,
     }),
     taskDirective: formatTaskDirective({
       role: params.role,
@@ -155,7 +191,7 @@ export async function resolveCodeClawSpawn(params: {
       objective: params.objective,
       acceptanceCriteria,
       constraints,
-      contextSlice: params.contextSlice,
+      contextSlice,
       boardSummary,
     }),
     allowedTools: config.allowedTools,
