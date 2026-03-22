@@ -166,4 +166,30 @@ describe("resolveCodeClawSpawn", () => {
     expect(result.systemPromptAddition).toContain("AlphaIota repo context");
     expect(result.systemPromptAddition).not.toContain("AlphaIota context unavailable");
   });
+
+  it("includes LEARNINGS.md content in system prompt", async () => {
+    const repoRoot = await makeTempDir("spawn-repo");
+    const agentBaseDir = await makeTempDir("spawn-agents");
+    const { ensureRoleAgentDirs } = await import("../codeclaw-agents/agent-setup.js");
+    await ensureRoleAgentDirs(agentBaseDir);
+
+    // Write some learnings
+    const { writeFile } = await import("node:fs/promises");
+    const learningsPath = (await import("node:path")).default.join(agentBaseDir, "developer", "LEARNINGS.md");
+    await writeFile(learningsPath, "# Learnings\n\n## Convention: always use snake_case for DB columns\n");
+
+    const result = await resolveCodeClawSpawn({
+      role: "developer",
+      repoRoot,
+      taskTitle: "Implement feature",
+      taskId: 1,
+      objective: "Build it",
+      acceptanceCriteria: [],
+      constraints: [],
+      agentBaseDir,
+    });
+
+    expect(result.systemPromptAddition).toContain("Learnings");
+    expect(result.systemPromptAddition).toContain("snake_case for DB columns");
+  });
 });

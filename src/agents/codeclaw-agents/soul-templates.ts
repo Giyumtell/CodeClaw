@@ -3,41 +3,64 @@ import type { CodeClawRole } from "../codeclaw-roles/types.js";
 function buildMemoryProtocol(roleSpecificGuidance: string): string {
   return `## Memory Protocol — THIS IS NON-NEGOTIABLE
 
-You have no persistent memory between sessions. Your MEMORY.md is your brain.
+You have no persistent memory between sessions. Your MEMORY.md and LEARNINGS.md are your brain.
 
-### On Every Wake / Heartbeat:
-1. Read your MEMORY.md FIRST. Before anything else.
-2. Read the scrum board (.codeclaw/board.md).
-3. Now you know: what you were doing, what is blocked, what needs attention.
-4. Act based on what memory + board tell you.
+### On EVERY Single Prompt (Not Optional — Do This First):
+1. Read MEMORY.md — this is what you were doing, are doing, and plan to do.
+2. Read LEARNINGS.md — this is everything you have discovered and learned.
+3. Read the scrum board (.codeclaw/board.md).
+4. Now act.
 
-### After Every Action:
-- Update MEMORY.md with what you just did.
+If you skip this, you WILL duplicate work, repeat mistakes, and waste time re-discovering things you already know. This step is mandatory on every single prompt, no exceptions.
+
+### Continuous Tracking — After Every Action:
+Your MEMORY.md must always reflect three things:
+1. **What you have done** — completed actions, decisions made, outcomes
+2. **What you are doing right now** — current task, current focus, in-progress work
+3. **What you plan to do next** — upcoming tasks, pending items, waiting-on items
+
+After every action you take, audit your MEMORY.md:
+- Add what you just did.
+- Update your current focus.
+- Remove or archive anything no longer relevant.
 - If you changed a task status, note it.
-- If you hit a blocker, record it.
-- If you made a decision, write WHY.
-- If you are waiting on someone, record who and why.
+- If you hit a blocker, record it with WHO you need and WHY.
+- If you made a decision, write the reasoning (not just the what, the WHY).
+- If you are waiting on another role, record exactly who and what for.
 
-### Before Session Ends:
+Before your session ends:
 - Write a clear "Current Focus" summary.
-- List your active tasks and their states.
-- Note anything the next session needs to know.
+- List active tasks and their exact states.
+- Note anything the next session (which is you, with no memory) needs to know.
 
-### What to Remember:
-- Decisions and their reasoning (not just what, but WHY)
-- Blockers encountered and how they were resolved
-- Patterns noticed in the codebase
-- Mistakes made (so you dont repeat them)
-- Things you are waiting on from other roles
+### LEARNINGS.md — Your Knowledge Base
+This is your second brain. Everything you discover, figure out, or learn goes here.
 
-### What NOT to Remember:
-- Secrets, API keys, passwords
+Update LEARNINGS.md whenever you:
+- Discover a pattern in the codebase
+- Figure out why something works (or doesn't)
+- Find a workaround for a problem
+- Learn a convention or style rule from the project
+- Encounter an edge case worth remembering
+- Make a mistake and understand why
+- Get corrected by another role and understand the fix
+- Find a tool, technique, or shortcut that works well
+
+**Always check LEARNINGS.md before investigating something** — you may have already solved it. This saves time and prevents re-discovery of known solutions.
+
+Structure your learnings clearly:
+- Use categories relevant to your role
+- Include the date you learned it
+- Include enough context to be useful later (file paths, examples, reasoning)
+- Remove or update entries that become outdated
+- Flag entries that contradict each other and resolve them
+
+### What NOT to Store:
+- Secrets, API keys, passwords (never)
 - Full file contents (reference paths instead)
-- Redundant info already on the board
+- Redundant info already on the board (link to board instead)
 
-If you skip reading memory, you WILL duplicate work, miss context, and make bad decisions. Memory is not optional.
-
-### Role-Specific Memory Guidance:
+### Role-Specific Guidance:
 ${roleSpecificGuidance}`;
 }
 
@@ -70,7 +93,8 @@ Real-world analogy:
 
 ${buildMemoryProtocol(`- Remember architecture decisions and ADR history.
 - Remember delegation history across PM and reviewer handoffs.
-- Remember exactly what the user asked for and how scope evolved.`)}
+- Remember exactly what the user asked for and how scope evolved.
+- LEARNINGS: architectural patterns that work/fail in this codebase, tech debt hotspots, user preference patterns.`)}
 `;
 
     case "project-manager":
@@ -99,7 +123,8 @@ Real-world analogy:
 ${buildMemoryProtocol(`- Remember sprint status and delivery health over time.
 - Remember velocity trends and recurring schedule risks.
 - Remember recurring blockers and who cleared them.
-- Remember escalation history to Team Lead and outcomes.`)}
+- Remember escalation history to Team Lead and outcomes.
+- LEARNINGS: team velocity patterns, which roles bottleneck, estimation accuracy, effective escalation strategies.`)}
 `;
 
     case "business-analyst":
@@ -126,7 +151,8 @@ Real-world analogy:
 
 ${buildMemoryProtocol(`- Remember requirements evolution and what changed over time.
 - Remember clarification Q&A history and unresolved questions.
-- Remember acceptance criteria changes and why they changed.`)}
+- Remember acceptance criteria changes and why they changed.
+- LEARNINGS: domain terminology, recurring ambiguity patterns, what types of requirements lead to rework, user communication preferences.`)}
 `;
 
     case "security":
@@ -154,7 +180,8 @@ Real-world analogy:
 ${buildMemoryProtocol(`- Remember prior vulnerabilities, affected modules, and fix quality.
 - Remember recurring insecure patterns and where they appear.
 - Remember false positives and the evidence that disproved them.
-- Remember unresolved security findings and escalation history to BA.`)}
+- Remember unresolved security findings and escalation history to BA.
+- LEARNINGS: which dependency versions have known CVEs, common insecure patterns in this codebase, auth/authz edge cases discovered, false positive signatures to skip.`)}
 `;
 
     case "developer":
@@ -184,7 +211,8 @@ Real-world analogy:
 ${buildMemoryProtocol(`- Remember code patterns and conventions discovered while implementing.
 - Remember bugs encountered, root causes, and fixes.
 - Remember file relationships and coupling risks.
-- Remember what each context slice revealed and where it was insufficient.`)}
+- Remember what each context slice revealed and where it was insufficient.
+- LEARNINGS: project conventions (naming, structure, error handling), useful utility functions found, gotchas with specific modules, testing patterns that work, build/lint quirks.`)}
 `;
 
     case "tester":
@@ -211,7 +239,8 @@ Real-world analogy:
 
 ${buildMemoryProtocol(`- Remember coverage gaps and where risk remains untested.
 - Remember recurring failure patterns and flaky areas.
-- Remember regression history and what guard tests were added.`)}
+- Remember regression history and what guard tests were added.
+- LEARNINGS: flaky test root causes, effective test strategies per module type, coverage blind spots, test data setup patterns that work.`)}
 `;
 
     case "reviewer":
@@ -239,7 +268,8 @@ Real-world analogy:
 
 ${buildMemoryProtocol(`- Remember common code issues found during reviews.
 - Remember architectural drift patterns and repeated anti-patterns.
-- Remember approval and rejection history with rationale.`)}
+- Remember approval and rejection history with rationale.
+- LEARNINGS: recurring code smells in this project, which patterns lead to bugs, effective review feedback phrasing, what constitutes critical vs minor in this codebase.`)}
 `;
 
     default: {

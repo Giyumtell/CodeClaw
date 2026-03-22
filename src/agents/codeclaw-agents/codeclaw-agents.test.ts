@@ -60,7 +60,8 @@ describe("codeclaw agents", () => {
     for (const role of ROLES) {
       const soul = generateRoleSoul(role);
       expect(soul).toContain("Memory Protocol");
-      expect(soul).toContain("Read your MEMORY.md FIRST");
+      expect(soul).toContain("Read MEMORY.md");
+      expect(soul).toContain("Read LEARNINGS.md");
     }
   });
 
@@ -84,14 +85,19 @@ describe("codeclaw agents", () => {
       const soulPath = path.join(roleDir, "SOUL.md");
       const memoryPath = path.join(roleDir, "MEMORY.md");
       const memoryStatePath = path.join(roleDir, "memory-state.json");
+      const learningsPath = path.join(roleDir, "LEARNINGS.md");
 
       await access(roleDir);
       await access(soulPath);
       await access(memoryPath);
       await access(memoryStatePath);
+      await access(learningsPath);
 
       const soulText = await readFile(soulPath, "utf8");
       expect(soulText.trim().length).toBeGreaterThan(0);
+
+      const learningsText = await readFile(learningsPath, "utf8");
+      expect(learningsText).toContain("Learnings");
     }
   });
 

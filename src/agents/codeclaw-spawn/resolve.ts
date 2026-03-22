@@ -81,6 +81,7 @@ function formatTaskDirective(params: {
 function formatSystemPromptAddition(params: {
   rolePrompt: string;
   memoryMarkdown: string;
+  learningsContent: string;
   boardSummary: string;
   alphaIotaContext?: string;
   alphaIotaWarning?: string;
@@ -97,6 +98,10 @@ function formatSystemPromptAddition(params: {
     "",
     "# Memory Context",
     params.memoryMarkdown,
+    "",
+    "# Learnings (Your Knowledge Base)",
+    "Read this FIRST — you may have already solved what you are about to investigate.",
+    params.learningsContent,
     "",
     "# Board Awareness Instructions",
     "- Read .codeclaw/board.md before starting implementation work.",
@@ -168,6 +173,16 @@ export async function resolveCodeClawSpawn(params: {
     ? formatRoleMemoryMarkdown(memoryState).trimEnd()
     : "No memory state found yet. Initialize by writing current focus and active tasks.";
 
+  // Read LEARNINGS.md for this role
+  let learningsContent = "No learnings recorded yet. Start documenting what you discover.";
+  try {
+    const { readFile } = await import("node:fs/promises");
+    const learningsPath = (await import("node:path")).default.join(config.agentDir, "LEARNINGS.md");
+    learningsContent = (await readFile(learningsPath, "utf8")).trim();
+  } catch {
+    // File doesn't exist yet — that's fine
+  }
+
   const boardSummary = formatBoardSummaryFromTasks(params.repoRoot, params.boardSummary);
 
   return {
@@ -180,6 +195,7 @@ export async function resolveCodeClawSpawn(params: {
     systemPromptAddition: formatSystemPromptAddition({
       rolePrompt,
       memoryMarkdown,
+      learningsContent,
       boardSummary,
       alphaIotaContext: contextSlice,
       alphaIotaWarning,
