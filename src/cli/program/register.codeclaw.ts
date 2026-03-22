@@ -1,5 +1,13 @@
 import type { Command } from "commander";
-import { codeClawAssignCommand, codeClawStatusCommand } from "../../commands/codeclaw.js";
+import {
+  codeClawAssignCommand,
+  codeClawBoardCommand,
+  codeClawExecuteCommand,
+  codeClawInitCommand,
+  codeClawNextCommand,
+  codeClawRunCommand,
+  codeClawStatusCommand,
+} from "../../commands/codeclaw.js";
 import { defaultRuntime } from "../../runtime.js";
 import { formatDocsLink } from "../../terminal/links.js";
 import { theme } from "../../terminal/theme.js";
@@ -16,6 +24,107 @@ export function registerCodeClawCommands(program: Command) {
       () =>
         `\n${theme.muted("Docs:")} ${formatDocsLink("/cli/codeclaw", "docs.openclaw.ai/cli/codeclaw")}\n`,
     );
+
+  codeclaw
+    .command("init")
+    .description("Initialize CodeClaw board and orchestrator artifacts")
+    .option("--repo-root <dir>", "Repository root")
+    .option("--project-name <name>", "Project name")
+    .option("--agent-base-dir <dir>", "Agent base directory")
+    .option("--json", "Output JSON instead of text", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawInitCommand(
+          {
+            repoRoot: opts.repoRoot as string | undefined,
+            projectName: opts.projectName as string | undefined,
+            agentBaseDir: opts.agentBaseDir as string | undefined,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  codeclaw
+    .command("run")
+    .description("Plan a full CodeClaw run for a goal")
+    .option("--repo-root <dir>", "Repository root")
+    .requiredOption("--user-goal <text>", "High-level user goal")
+    .option("--project-name <name>", "Project name")
+    .option("--agent-base-dir <dir>", "Agent base directory")
+    .option("--json", "Output JSON instead of text", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawRunCommand(
+          {
+            repoRoot: opts.repoRoot as string | undefined,
+            userGoal: opts.userGoal as string,
+            projectName: opts.projectName as string | undefined,
+            agentBaseDir: opts.agentBaseDir as string | undefined,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  codeclaw
+    .command("next")
+    .description("Resolve the next step from orchestrator state")
+    .option("--repo-root <dir>", "Repository root")
+    .option("--agent-base-dir <dir>", "Agent base directory")
+    .option("--json", "Output JSON instead of text", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawNextCommand(
+          {
+            repoRoot: opts.repoRoot as string | undefined,
+            agentBaseDir: opts.agentBaseDir as string | undefined,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  codeclaw
+    .command("board")
+    .description("Show CodeClaw board state")
+    .option("--repo-root <dir>", "Repository root")
+    .option("--json", "Output JSON instead of text", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawBoardCommand(
+          {
+            repoRoot: opts.repoRoot as string | undefined,
+            json: Boolean(opts.json),
+          },
+          defaultRuntime,
+        );
+      });
+    });
+
+  codeclaw
+    .command("execute")
+    .description("Prepare and optionally spawn the next CodeClaw step")
+    .option("--repo-root <dir>", "Repository root")
+    .option("--agent-base-dir <dir>", "Agent base directory")
+    .option("--json", "Output JSON instead of text", false)
+    .option("--spawn", "Spawn via gateway after preparing step", false)
+    .action(async (opts) => {
+      await runCommandWithRuntime(defaultRuntime, async () => {
+        await codeClawExecuteCommand(
+          {
+            repoRoot: opts.repoRoot as string | undefined,
+            agentBaseDir: opts.agentBaseDir as string | undefined,
+            json: Boolean(opts.json),
+            spawn: Boolean(opts.spawn),
+          },
+          defaultRuntime,
+        );
+      });
+    });
 
   codeclaw
     .command("assign")

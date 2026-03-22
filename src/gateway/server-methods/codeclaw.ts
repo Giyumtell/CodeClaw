@@ -6,6 +6,7 @@ import { moveTask } from "../../agents/codeclaw-board/board-ops.js";
 import type { CodeClawTaskStatus } from "../../agents/codeclaw-board/types.js";
 import { readRoleMemory } from "../../agents/codeclaw-memory/memory-io.js";
 import type { RoleMemoryState } from "../../agents/codeclaw-memory/types.js";
+import { prepareNextExecution } from "../../agents/codeclaw-orchestrator/execute.js";
 import { initCodeClawProject } from "../../agents/codeclaw-orchestrator/init.js";
 import { readOrchestratorState } from "../../agents/codeclaw-orchestrator/orchestrator-io.js";
 import { getNextCodeClawStep, planCodeClawRun } from "../../agents/codeclaw-orchestrator/runner.js";
@@ -119,6 +120,30 @@ export const codeclawHandlers: GatewayRequestHandlers = {
 
     const nextStep = await getNextCodeClawStep({ repoRoot });
     respond(true, nextStep ?? { done: true }, undefined);
+  },
+  "codeclaw.execute": async ({ params, respond }) => {
+    const repoRoot = typeof params.repoRoot === "string" ? params.repoRoot.trim() : "";
+    const agentBaseDir =
+      typeof params.agentBaseDir === "string" ? params.agentBaseDir.trim() : undefined;
+    if (!repoRoot) {
+      respond(false, undefined, errorShape(ErrorCodes.INVALID_REQUEST, "repoRoot required"));
+      return;
+    }
+
+    const execution = await prepareNextExecution({ repoRoot, agentBaseDir });
+    if (!execution) {
+      respond(true, { done: true }, undefined);
+      return;
+    }
+
+    respond(
+      true,
+      {
+        step: execution.step,
+        spawnParams: execution.spawnParams,
+      },
+      undefined,
+    );
   },
   "codeclaw.advance": async ({ params, respond }) => {
     const repoRoot = typeof params.repoRoot === "string" ? params.repoRoot.trim() : "";

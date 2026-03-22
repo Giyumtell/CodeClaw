@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { formatBoardMarkdown } from "../agents/codeclaw-board/board-format.js";
 import { readBoard } from "../agents/codeclaw-board/board-io.js";
+import { prepareNextExecution } from "../agents/codeclaw-orchestrator/execute.js";
 import { initCodeClawProject } from "../agents/codeclaw-orchestrator/init.js";
 import { getNextCodeClawStep, planCodeClawRun } from "../agents/codeclaw-orchestrator/runner.js";
 import { resolveStateDir } from "../config/paths.js";
@@ -352,4 +353,85 @@ export async function codeClawBoardCommand(
   }
 
   runtime.log(formatBoardMarkdown(board).trimEnd());
+}
+
+export async function codeClawExecuteCommand(
+  opts: {
+    repoRoot?: string;
+    agentBaseDir?: string;
+    json?: boolean;
+    spawn?: boolean;
+  },
+  runtime: RuntimeEnv,
+): Promise<void> {
+  const repoRoot = path.resolve(opts.repoRoot?.trim() || process.cwd());
+  const execution = await prepareNextExecution({
+    repoRoot,
+    agentBaseDir: opts.agentBaseDir,
+  });
+
+  if (!execution) {
+    if (opts.json) {
+      runtime.log(JSON.stringify({ done: true }, null, 2));
+      return;
+    }
+    runtime.log("All tasks complete");
+    return;
+  }
+
+  if (opts.spawn) {
+    const { callGateway, randomIdempotencyKey } = await import("./codeclaw.gateway.runtime.js");
+    const response = await callGateway({
+      method: "agent",
+      params: {
+        message: execution.spawnParams.task,
+        agentId: execution.spawnParams.agentId,
+        model: execution.spawnParams.model,
+        extraSystemPrompt: execution.spawnParams.systemPromptAddition,
+        label: execution.spawnParams.label,
+        idempotencyKey: randomIdempotencyKey(),
+      },
+      expectFinal: true,
+    });
+
+    if (opts.json) {
+      runtime.log(
+        JSON.stringify(
+          {
+            step: execution.step,
+            spawnParams: execution.spawnParams,
+            gateway: response,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+
+    runtime.log(
+      `Spawned [${execution.step.phase}] ${execution.step.role} for task #${execution.step.taskId} (${execution.spawnParams.agentId})`,
+    );
+    return;
+  }
+
+  if (opts.json) {
+    runtime.log(
+      JSON.stringify(
+        {
+          step: execution.step,
+          spawnParams: execution.spawnParams,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  runtime.log(
+    `Prepared [${execution.step.phase}] ${execution.step.role} for task #${execution.step.taskId} (${execution.spawnParams.agentId})`,
+  );
+  runtime.log(`Label: ${execution.spawnParams.label}`);
+  runtime.log("Use --spawn to launch this step via gateway.");
 }

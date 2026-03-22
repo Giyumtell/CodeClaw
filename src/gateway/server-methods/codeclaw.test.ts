@@ -127,4 +127,26 @@ describe("codeclaw gateway handlers", () => {
     expect(call[0]).toBe(true);
     expect(call[1]?.tasks.find((task) => task.id === 1)?.status).toBe("in-progress");
   });
+
+  it("codeclaw.execute returns spawn params for next step", async () => {
+    const repoRoot = await makeTempDir("codeclaw-repo");
+    const agentBaseDir = await makeTempDir("codeclaw-agents");
+    await invoke("codeclaw.plan", {
+      repoRoot,
+      projectName: "Gateway Project",
+      userGoal: "Ship gateway handlers",
+      agentBaseDir,
+    });
+
+    const respond = await invoke("codeclaw.execute", { repoRoot, agentBaseDir });
+
+    const call = respond.mock.calls[0] as [
+      boolean,
+      { done?: boolean; step?: { taskId: number }; spawnParams?: { agentId: string } } | undefined,
+    ];
+    expect(call[0]).toBe(true);
+    expect(call[1]?.done).not.toBe(true);
+    expect(call[1]?.step?.taskId).toBeTypeOf("number");
+    expect(call[1]?.spawnParams?.agentId).toBeTypeOf("string");
+  });
 });

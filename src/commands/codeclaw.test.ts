@@ -6,6 +6,7 @@ import {
   assignCodeClawTask,
   codeClawAssignCommand,
   codeClawBoardCommand,
+  codeClawExecuteCommand,
   codeClawInitCommand,
   codeClawNextCommand,
   codeClawRunCommand,
@@ -173,5 +174,29 @@ describe("CodeClaw commands", () => {
     const output = runtime.log.mock.calls.map((call) => String(call[0])).join("\n");
     expect(output).toContain("Next step:");
     expect(output).toContain("business-analyst");
+  });
+
+  it("codeClawExecuteCommand prepares next spawn params", async () => {
+    const repoRoot = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-repo-"));
+    const agentBaseDir = await fs.mkdtemp(path.join(os.tmpdir(), "codeclaw-agents-"));
+    tempRoots.push(repoRoot, agentBaseDir);
+    const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };
+
+    await codeClawRunCommand(
+      {
+        repoRoot,
+        userGoal: "Build CodeClaw orchestration",
+        projectName: "CodeClaw",
+        agentBaseDir,
+      },
+      runtime,
+    );
+    runtime.log.mockClear();
+
+    await codeClawExecuteCommand({ repoRoot, agentBaseDir }, runtime);
+
+    const output = runtime.log.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(output).toContain("Prepared [requirements] business-analyst");
+    expect(output).toContain("Use --spawn to launch this step via gateway.");
   });
 });
