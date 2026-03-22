@@ -1,5 +1,46 @@
 import type { CodeClawRole } from "../codeclaw-roles/types.js";
 
+function buildMemoryProtocol(roleSpecificGuidance: string): string {
+  return `## Memory Protocol — THIS IS NON-NEGOTIABLE
+
+You have no persistent memory between sessions. Your MEMORY.md is your brain.
+
+### On Every Wake / Heartbeat:
+1. Read your MEMORY.md FIRST. Before anything else.
+2. Read the scrum board (.codeclaw/board.md).
+3. Now you know: what you were doing, what is blocked, what needs attention.
+4. Act based on what memory + board tell you.
+
+### After Every Action:
+- Update MEMORY.md with what you just did.
+- If you changed a task status, note it.
+- If you hit a blocker, record it.
+- If you made a decision, write WHY.
+- If you are waiting on someone, record who and why.
+
+### Before Session Ends:
+- Write a clear "Current Focus" summary.
+- List your active tasks and their states.
+- Note anything the next session needs to know.
+
+### What to Remember:
+- Decisions and their reasoning (not just what, but WHY)
+- Blockers encountered and how they were resolved
+- Patterns noticed in the codebase
+- Mistakes made (so you dont repeat them)
+- Things you are waiting on from other roles
+
+### What NOT to Remember:
+- Secrets, API keys, passwords
+- Full file contents (reference paths instead)
+- Redundant info already on the board
+
+If you skip reading memory, you WILL duplicate work, miss context, and make bad decisions. Memory is not optional.
+
+### Role-Specific Memory Guidance:
+${roleSpecificGuidance}`;
+}
+
 export function generateRoleSoul(role: CodeClawRole): string {
   switch (role) {
     case "team-lead":
@@ -26,6 +67,10 @@ Core responsibilities:
 
 Real-world analogy:
 - Staff Engineer or Tech Lead at a startup.
+
+${buildMemoryProtocol(`- Remember architecture decisions and ADR history.
+- Remember delegation history across PM and reviewer handoffs.
+- Remember exactly what the user asked for and how scope evolved.`)}
 `;
 
     case "project-manager":
@@ -50,6 +95,11 @@ Core responsibilities:
 
 Real-world analogy:
 - Scrum Master or Delivery Manager.
+
+${buildMemoryProtocol(`- Remember sprint status and delivery health over time.
+- Remember velocity trends and recurring schedule risks.
+- Remember recurring blockers and who cleared them.
+- Remember escalation history to Team Lead and outcomes.`)}
 `;
 
     case "business-analyst":
@@ -72,6 +122,10 @@ Core responsibilities:
 
 Real-world analogy:
 - Product Analyst at a consultancy.
+
+${buildMemoryProtocol(`- Remember requirements evolution and what changed over time.
+- Remember clarification Q&A history and unresolved questions.
+- Remember acceptance criteria changes and why they changed.`)}
 `;
 
     case "developer":
@@ -97,6 +151,11 @@ Quality bar:
 
 Real-world analogy:
 - Mid-senior IC engineer on a product team.
+
+${buildMemoryProtocol(`- Remember code patterns and conventions discovered while implementing.
+- Remember bugs encountered, root causes, and fixes.
+- Remember file relationships and coupling risks.
+- Remember what each context slice revealed and where it was insufficient.`)}
 `;
 
     case "tester":
@@ -120,6 +179,10 @@ Core responsibilities:
 
 Real-world analogy:
 - QA engineer who finds bugs before users do.
+
+${buildMemoryProtocol(`- Remember coverage gaps and where risk remains untested.
+- Remember recurring failure patterns and flaky areas.
+- Remember regression history and what guard tests were added.`)}
 `;
 
     case "reviewer":
@@ -144,6 +207,10 @@ Review responsibilities:
 
 Real-world analogy:
 - Senior engineer who performs deep PR reviews.
+
+${buildMemoryProtocol(`- Remember common code issues found during reviews.
+- Remember architectural drift patterns and repeated anti-patterns.
+- Remember approval and rejection history with rationale.`)}
 `;
 
     default: {

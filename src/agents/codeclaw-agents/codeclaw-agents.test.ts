@@ -55,6 +55,14 @@ describe("codeclaw agents", () => {
     }
   });
 
+  it("all soul templates include mandatory memory protocol", () => {
+    for (const role of ROLES) {
+      const soul = generateRoleSoul(role);
+      expect(soul).toContain("Memory Protocol");
+      expect(soul).toContain("Read your MEMORY.md FIRST");
+    }
+  });
+
   it("soul templates encode chain of command", () => {
     expect(generateRoleSoul("team-lead")).toContain("User -> Team Lead");
     expect(generateRoleSoul("project-manager")).toContain("report to the Team Lead");
@@ -64,7 +72,7 @@ describe("codeclaw agents", () => {
     expect(generateRoleSoul("reviewer")).toContain("report directly to the Team Lead");
   });
 
-  it("ensureRoleAgentDirs creates all directories and SOUL.md files", async () => {
+  it("ensureRoleAgentDirs creates all directories and memory files", async () => {
     const baseDir = await makeTempDir();
 
     await ensureRoleAgentDirs(baseDir);
@@ -73,29 +81,28 @@ describe("codeclaw agents", () => {
       const roleDir = path.join(baseDir, role);
       const soulPath = path.join(roleDir, "SOUL.md");
       const memoryPath = path.join(roleDir, "MEMORY.md");
+      const memoryStatePath = path.join(roleDir, "memory-state.json");
 
       await access(roleDir);
       await access(soulPath);
       await access(memoryPath);
+      await access(memoryStatePath);
 
       const soulText = await readFile(soulPath, "utf8");
       expect(soulText.trim().length).toBeGreaterThan(0);
     }
   });
 
-  it("ensureRoleAgentDirs never overwrites existing files", async () => {
+  it("ensureRoleAgentDirs preserves existing SOUL.md", async () => {
     const baseDir = await makeTempDir();
     const roleDir = path.join(baseDir, "developer");
     await mkdir(roleDir, { recursive: true });
 
     const soulPath = path.join(roleDir, "SOUL.md");
-    const memoryPath = path.join(roleDir, "MEMORY.md");
     await writeFile(soulPath, "custom soul", "utf8");
-    await writeFile(memoryPath, "custom memory", "utf8");
 
     await ensureRoleAgentDirs(baseDir);
 
     expect(await readFile(soulPath, "utf8")).toBe("custom soul");
-    expect(await readFile(memoryPath, "utf8")).toBe("custom memory");
   });
 });
